@@ -1,0 +1,15 @@
+/vendor/
+/node_modules/
+/composer.lock
+/.phpunit.cache
+/.php-cs-fixer.cache
+/coberage.xml
+/reports/
+.DS_Store
+.idea/
+.vscode/
+tests/tmp/
+docs/archive/
+coverage/
+logs/
+debug_monolog.php

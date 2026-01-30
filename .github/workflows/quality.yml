@@ -1,0 +1,49 @@
+name: Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-versions: ['8.5']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          coverage: pcov
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Check Code Style (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Static Analysis (PHPStan)
+        run: vendor/bin/phpstan analyse --no-progress
+
+      - name: Mess Detector (PHPMD)
+        run: vendor/bin/phpmd src text phpmd.xml
+
+      - name: Code Sniffer (PHPCS)
+        run: vendor/bin/phpcs src tests
+
+      - name: Architecture Tests (Pest Arch)
+        run: vendor/bin/pest --group=arch
+
+      - name: Unit Tests
+        run: vendor/bin/pest --group=unit --coverage-clover coverage.xml
+
+      - name: Integration Tests
+        run: vendor/bin/pest --group=integration

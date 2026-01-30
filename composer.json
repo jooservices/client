@@ -1,0 +1,69 @@
+{
+    "name": "jooservices/client",
+    "description": "A robust, layered HTTP Client wrapper for JOOservices",
+    "type": "library",
+    "version": "1.0.0",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "JOOservices",
+            "email": "contact@jooservices.com"
+        }
+    ],
+    "require": {
+        "php": "^8.5",
+        "guzzlehttp/guzzle": "^7.9",
+        "jooservices/dto": "^1.0",
+        "monolog/monolog": "^3.10",
+        "psr/log": "^3.0",
+        "psr/simple-cache": "^3.0",
+        "symfony/options-resolver": "^7.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.18",
+        "mockery/mockery": "^1.6",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-arch": "^4.0",
+        "phpbench/phpbench": "^1.4",
+        "phpmd/phpmd": "^2.15",
+        "phpstan/phpstan": "^1.12",
+        "phpunit/phpunit": "^12.0",
+        "squizlabs/php_codesniffer": "^3.10",
+        "symfony/filesystem": "^7.4",
+        "symfony/var-dumper": "^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "JOOservices\\Client\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test:unit": "vendor/bin/pest --group=unit",
+        "test:integration": "vendor/bin/pest --group=integration",
+        "test:arch": "vendor/bin/pest --group=arch",
+        "analyse": "vendor/bin/phpstan analyse",
+        "check:cs": "vendor/bin/phpcs src tests",
+        "fix:cs": "vendor/bin/pint",
+        "format": "vendor/bin/pint",
+        "quality": [
+            "@fix:cs",
+            "@analyse",
+            "@check:cs",
+            "@test"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
