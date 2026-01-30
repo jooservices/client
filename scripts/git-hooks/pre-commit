@@ -1,0 +1,30 @@
+#!/bin/bash
+
+echo "🔍 Running Pre-Commit Quality Checks..."
+
+# 1. Pint (Quick Fixes)
+echo "🎨 Running Pint..."
+vendor/bin/pint
+if [ $? -ne 0 ]; then
+    echo "❌ Pint failed!"
+    exit 1
+fi
+
+# 2. PHPStan
+echo "🧠 Running PHPStan..."
+vendor/bin/phpstan analyse --no-progress
+if [ $? -ne 0 ]; then
+    echo "❌ PHPStan failed!"
+    exit 1
+fi
+
+# 3. Pest Architecture
+echo "🏛️ Running Architecture Tests..."
+vendor/bin/pest --group=arch
+if [ $? -ne 0 ]; then
+    echo "❌ Architecture Tests failed!"
+    exit 1
+fi
+
+echo "✅ All checks passed! Committing..."
+exit 0
