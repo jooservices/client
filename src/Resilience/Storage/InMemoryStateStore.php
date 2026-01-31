@@ -9,15 +9,18 @@ use JOOservices\Client\Resilience\Contracts\StateStoreInterface;
 class InMemoryStateStore implements StateStoreInterface
 {
     private int $failures = 0;
-    private ?float $lastFailureTime = null;
     private ?float $openedAt = null;
     private int $halfOpenSuccesses = 0;
 
     public function recordFailure(): void
     {
         $this->failures++;
-        $this->lastFailureTime = microtime(true);
         $this->halfOpenSuccesses = 0;
+
+        // If we were in half-open state and failed, reopen the circuit
+        if ($this->openedAt !== null) {
+            $this->openedAt = microtime(true);
+        }
     }
 
     public function recordSuccess(): void
@@ -76,18 +79,7 @@ class InMemoryStateStore implements StateStoreInterface
     public function reset(): void
     {
         $this->failures = 0;
-        $this->lastFailureTime = null;
         $this->openedAt = null;
         $this->halfOpenSuccesses = 0;
-    }
-
-    public function getFailureCount(): int
-    {
-        return $this->failures;
-    }
-
-    public function getLastFailureTime(): ?float
-    {
-        return $this->lastFailureTime;
     }
 }

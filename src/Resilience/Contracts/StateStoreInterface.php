@@ -17,8 +17,4 @@ interface StateStoreInterface
      * Reset the state to CLOSED (healthy).
      */
     public function reset(): void;
-
-    public function getFailureCount(): int;
-
-    public function getLastFailureTime(): ?float;
 }

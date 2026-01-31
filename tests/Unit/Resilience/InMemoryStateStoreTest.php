@@ -5,35 +5,22 @@ declare(strict_types=1);
 use JOOservices\Client\Resilience\Storage\InMemoryStateStore;
 
 describe('InMemoryStateStore', function () {
-    it('starts with zero failure count', function () {
+    it('starts with circuit closed', function () {
         $store = new InMemoryStateStore();
 
-        expect($store->getFailureCount())->toBe(0);
-        expect($store->getLastFailureTime())->toBeNull();
+        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
+        expect($store->isHalfOpen(5000))->toBeFalse();
     });
 
-    it('records failures and increments count', function () {
+    it('records failures and opens circuit at threshold', function () {
         $store = new InMemoryStateStore();
+        $threshold = 2;
 
         $store->recordFailure();
-        expect($store->getFailureCount())->toBe(1);
-        expect($store->getLastFailureTime())->not->toBeNull();
+        expect($store->isCircuitOpen($threshold, 5000))->toBeFalse();
 
         $store->recordFailure();
-        expect($store->getFailureCount())->toBe(2);
-    });
-
-    it('tracks last failure time', function () {
-        $store = new InMemoryStateStore();
-
-        $before = microtime(true);
-        $store->recordFailure();
-        $after = microtime(true);
-
-        $lastFailure = $store->getLastFailureTime();
-
-        expect($lastFailure)->toBeGreaterThanOrEqual($before);
-        expect($lastFailure)->toBeLessThanOrEqual($after);
+        expect($store->isCircuitOpen($threshold, 5000))->toBeTrue();
     });
 
     it('opens circuit after threshold reached', function () {
@@ -54,27 +41,31 @@ describe('InMemoryStateStore', function () {
     it('resets state completely', function () {
         $store = new InMemoryStateStore();
 
+        // Open the circuit
         $store->recordFailure();
         $store->recordFailure();
         $store->recordFailure();
+        expect($store->isCircuitOpen(3, 5000))->toBeTrue();
 
         $store->reset();
 
-        expect($store->getFailureCount())->toBe(0);
-        expect($store->getLastFailureTime())->toBeNull();
+        // Circuit should be closed after reset
         expect($store->isCircuitOpen(3, 5000))->toBeFalse();
+        expect($store->isHalfOpen(5000))->toBeFalse();
     });
 
-    it('records success and resets count when closed', function () {
+    it('records success and resets failures when closed', function () {
         $store = new InMemoryStateStore();
 
         $store->recordFailure();
         $store->recordFailure();
-        expect($store->getFailureCount())->toBe(2);
+        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
 
         $store->recordSuccess();
 
-        expect($store->getFailureCount())->toBe(0);
+        // After success, should still be closed and not open even with more failures
+        $store->recordFailure();
+        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
     });
 
     it('detects half-open state after recovery timeout', function () {

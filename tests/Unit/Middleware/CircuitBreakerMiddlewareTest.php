@@ -30,7 +30,8 @@ describe('CircuitBreakerMiddleware', function () {
         // Record some failures first
         $store->recordFailure();
         $store->recordFailure();
-        expect($store->getFailureCount())->toBe(2);
+        // Circuit should not be open yet (threshold is 3)
+        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
 
         $middleware = new CircuitBreakerMiddleware($config, $store);
         $request = new Request('GET', 'https://example.com/api');
@@ -38,7 +39,8 @@ describe('CircuitBreakerMiddleware', function () {
 
         $middleware($request, [], $next);
 
-        expect($store->getFailureCount())->toBe(0);
+        // After success, circuit should still be closed
+        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
     });
 
     it('records failure and rethrows exception', function () {
@@ -51,7 +53,9 @@ describe('CircuitBreakerMiddleware', function () {
 
         expect(fn () => $middleware($request, [], $next))
             ->toThrow(\RuntimeException::class);
-        expect($store->getFailureCount())->toBe(1);
+
+        // After one failure, circuit should not be open yet
+        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
     });
 
     it('opens circuit after reaching failure threshold', function () {

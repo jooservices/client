@@ -38,35 +38,18 @@ class CircuitBreakerMiddleware implements MiddlewareInterface
             /** @var ResponseInterface $response */
             $response = $next($request, $options);
 
-            // Success!
-            // If Half-Open, record success. If enough successes -> Closed.
-            // If Closed, simplified logic: reset failures on success.
-
+            // Success! Handle based on circuit state
             if ($this->store->isHalfOpen($this->config->recoveryTimeoutMs)) {
+                // In Half-Open state: record success and check if we should close the circuit
                 $this->store->reportSuccessInHalfOpen();
-                // Check if we should close
-                // Note: The store implementation provided earlier didn't expose 'checkHalfOpenRecovery'.
-                // Let's assume we can extend the interface or use a specific method.
-                // Re-reading interface: verify 'reportSuccessInHalfOpen' usage.
 
-                // Oops, I need to check if we can close.
-                // Let's refine the logic:
-                // Since interface is generic, maybe we just call recordSuccess?
-                // But InMemoryStore separates half-open logic.
-                // Let's use recordSuccess() which InMemoryStore resets.
-                // Actually my InMemoryStore::recordSuccess() resets failures if openedAt is null.
-                // Wait, if openedAt is SET, recordSuccess needs to know about HalfOpen state.
-
-                // Let's upgrade the store logic in the middleware or fix the store.
-                // For now, let's assume recordSuccess handles it or I check condition.
-
-                // Let's stick to generic `recordSuccess`.
-                $this->store->recordSuccess();
-                // If I am half open, I need to know if I should CLOSE.
-                // InMemoryStore logic for Reset needs update?
-                // Let's call reset() if we have enough successes?
-                // It's getting complex to do in Middleware. Store should handle state transitions ideally.
+                // Check if we have enough successful requests to close the circuit
+                if ($this->store->checkHalfOpenRecovery($this->config->successThreshold)) {
+                    // Close the circuit - reset all state
+                    $this->store->reset();
+                }
             } else {
+                // In Closed state: reset failure count on success
                 $this->store->recordSuccess();
             }
 
