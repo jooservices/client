@@ -31,34 +31,22 @@ JOOCLIENT_CACHE_PATH=/path/to/cache/directory
 ### Via Code
 
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Cache\RedisCache;
+use JOOservices\Client\Cache\Config\RedisCacheConfig;
 
-// Redis Cache
-$factory = (new Factory())->enableCache([
-    'cache' => [
-        'enabled' => true,
-        'driver' => 'redis',
-        'default_ttl' => 3600,
-        'redis' => [
-            'host' => '127.0.0.1',
-            'port' => 6379,
-            'database' => 0,
-            'prefix' => 'jooclient:',
-        ]
-    ]
-]);
+// Configure Redis Cache
+$cacheConfig = new RedisCacheConfig(
+    host: '127.0.0.1',
+    port: 6379,
+    prefix: 'jooclient:'
+);
+$cache = new RedisCache($cacheConfig);
 
-// Filesystem Cache
-$factory = (new Factory())->enableCache([
-    'cache' => [
-        'enabled' => true,
-        'driver' => 'filesystem',
-        'default_ttl' => 3600,
-        'filesystem' => [
-            'path' => storage_path('framework/cache/jooclient'),
-        ]
-    ]
-]);
+// Build Client with Cache
+$client = ClientBuilder::create()
+    ->withCache($cache, defaultTtl: 3600)
+    ->build();
 ```
 
 ## Usage
@@ -66,26 +54,22 @@ $factory = (new Factory())->enableCache([
 ### Basic Caching
 
 ```php
-use JOOservices\Client\Factory\Factory;
-
-// Enable cache via config
-$factory = (new Factory())->enableCache();
-$result = $factory->make();
+$client = ClientBuilder::create()
+    ->withCache($cache)
+    ->build();
 
 // First request - hits the API
-$response1 = $result->get('https://api.example.com/users');
+$response1 = $client->get('https://api.example.com/users');
 
 // Second request - served from cache!
-$response2 = $result->get('https://api.example.com/users');
+$response2 = $client->get('https://api.example.com/users');
 ```
 
 ### Custom TTL Per Request
 
 ```php
-$result = $factory->make();
-
-// Cache for 10 minutes
-$response = $result->get('https://api.example.com/users', [
+// Cache for 10 minutes (overrides default)
+$response = $client->get('https://api.example.com/users', [
     'cache_ttl' => 600
 ]);
 ```
@@ -93,13 +77,13 @@ $response = $result->get('https://api.example.com/users', [
 ### Disable Cache for Specific Request
 
 ```php
-$result = $factory->make();
-
 // Bypass cache for this request
-$response = $result->get('https://api.example.com/users', [
+$response = $client->get('https://api.example.com/users', [
     'no_cache' => true
 ]);
 ```
+
+---
 
 ## How It Works
 
@@ -130,17 +114,7 @@ GET https://api.example.com/users?page=1
 - Requests with `no_cache` option
 - Responses with `Cache-Control: no-store`
 
-### Cache-Control Respecting
-
-The middleware respects `Cache-Control` headers:
-
-```php
-// Response with Cache-Control: max-age=300
-// Will be cached for 5 minutes (min of max-age and default_ttl)
-
-// Response with Cache-Control: no-cache
-// Will NOT be cached
-```
+---
 
 ## Redis Driver
 
@@ -149,7 +123,6 @@ The middleware respects `Cache-Control` headers:
 - ✅ Distributed caching across servers
 - ✅ Automatic expiration
 - ✅ Key prefixing for namespace isolation
-- ✅ Connection pooling
 
 ### Requirements
 ```bash
@@ -157,15 +130,18 @@ The middleware respects `Cache-Control` headers:
 pecl install redis
 ```
 
-### Configuration
+### Configuration Class
 
-```env
-JOOCLIENT_CACHE_DRIVER=redis
-JOOCLIENT_REDIS_HOST=127.0.0.1
-JOOCLIENT_REDIS_PORT=6379
-JOOCLIENT_REDIS_PASSWORD=your_password  # Optional
-JOOCLIENT_REDIS_DATABASE=0
-JOOCLIENT_REDIS_PREFIX=jooclient:
+```php
+use JOOservices\Client\Cache\Config\RedisCacheConfig;
+
+$config = new RedisCacheConfig(
+    host: '127.0.0.1',
+    port: 6379,
+    password: null,
+    database: 0,
+    prefix: 'api_cache:'
+);
 ```
 
 ### Benefits
@@ -174,57 +150,7 @@ JOOCLIENT_REDIS_PREFIX=jooclient:
 - Automatic memory management
 - Built-in expiration
 
-### Use When
-- Running multiple servers
-- Need fast response times
-- Have Redis available
-- Want distributed caching
-
-## Filesystem Driver
-
-### Features
-- ✅ No external dependencies
-- ✅ Simple file-based storage
-- ✅ Automatic directory creation
-- ✅ TTL-based expiration
-- ✅ Concurrent access safe
-
-### Configuration
-
-```env
-JOOCLIENT_CACHE_DRIVER=filesystem
-JOOCLIENT_CACHE_PATH=/var/www/storage/cache/jooclient
-```
-
-### Storage Structure
-
-```
-/cache/jooclient/
-  ├── ab/
-  │   └── cd/
-  │       └── abcd...hash (cache file)
-  └── ef/
-      └── gh/
-          └── efgh...hash (cache file)
-```
-
-Each file contains:
-```
-[expiration_timestamp]
-[cached_content]
-```
-
-### Benefits
-- No external dependencies
-- Simple to set up
-- Works on any filesystem
-- Easy to inspect/debug
-
-### Use When
-- Single server deployment
-- Redis not available
-- Simple caching needs
-- Development/testing
+---
 
 ## Best Practices
 
@@ -232,13 +158,9 @@ Each file contains:
 
 ```php
 // Short-lived data (5 minutes)
-$config['cache']['default_ttl'] = 300;
-
-// Medium-lived data (1 hour)
-$config['cache']['default_ttl'] = 3600;
-
-// Long-lived data (24 hours)
-$config['cache']['default_ttl'] = 86400;
+$client = ClientBuilder::create()
+    ->withCache($cache, defaultTtl: 300)
+    ->build();
 ```
 
 ### 2. Use Different Cache Keys for Different Parameters
@@ -254,9 +176,7 @@ $client->get('/users?sort=name');
 
 ```php
 use JOOservices\Client\Cache\RedisCache;
-use JOOservices\Client\Cache\Config\RedisCacheConfig;
 
-$config = RedisCacheConfig::fromArray([/* ... */]);
 $cache = new RedisCache($config);
 
 // Clear all cache
@@ -269,12 +189,11 @@ $cache->delete('specific_cache_key');
 ### 4. Monitor Cache Hit Rate
 
 ```php
-// Log cache hits/misses for monitoring
-$factory = (new Factory())
-    ->enableLogging()  // Log requests
-    ->enableCache();    // Cache responses
-
-// Check logs to see cache performance
+// Log cache hits/misses by inspecting response headers or logs
+$client = ClientBuilder::create()
+    ->withDefaultLogging()
+    ->withCache($cache)
+    ->build();
 ```
 
 ### 5. Use Cache for Read-Heavy APIs
@@ -287,30 +206,17 @@ $client->get('/api/products');  // ✅ Cached
 $client->get('/api/user/profile');  // ⚠️ Be careful with caching
 ```
 
+---
+
 ## Troubleshooting
 
 ### Cache Not Working
 
-1. **Check if caching is enabled**
-   ```env
-   JOOCLIENT_CACHE_ENABLED=true
-   ```
-
-2. **Verify driver configuration**
-   ```env
-   JOOCLIENT_CACHE_DRIVER=redis  # or filesystem
-   ```
-
-3. **Check Redis connection** (if using Redis)
+1. **Check if caching is enabled** (Requires valid CacheInterface passed to `withCache`)
+2. **Check Redis connection**
    ```bash
    redis-cli ping
    # Should return: PONG
-   ```
-
-4. **Verify filesystem permissions** (if using filesystem)
-   ```bash
-   ls -la /path/to/cache
-   # Should be writable by PHP
    ```
 
 ### Redis Connection Errors
@@ -319,139 +225,67 @@ $client->get('/api/user/profile');  // ⚠️ Be careful with caching
 // Error: "Redis extension is not installed"
 // Solution: Install ext-redis
 pecl install redis
-
-// Error: "Failed to connect to Redis server"
-// Solution: Check Redis is running
-systemctl status redis
-
-// Error: "Redis authentication failed"
-// Solution: Check password in .env
-JOOCLIENT_REDIS_PASSWORD=correct_password
 ```
 
-### Filesystem Permission Errors
-
-```bash
-# Make cache directory writable
-chmod 755 /path/to/cache
-chown www-data:www-data /path/to/cache
-```
-
-## Performance Tips
-
-### 1. Use Redis for Production
-
-Redis is significantly faster than filesystem caching:
-- Redis: ~0.1ms per operation
-- Filesystem: ~10ms per operation
-
-### 2. Set Appropriate TTL
-
-Longer TTL = Less API calls = Better performance
-But: Stale data risk increases
-
-### 3. Use Cache for Expensive Operations
-
-```php
-// Good: Expensive API calls
-$client->get('/api/heavy-computation');
-
-// Not needed: Fast endpoints
-$client->get('/api/health-check');  // Skip cache
-```
-
-### 4. Monitor Cache Size
-
-```bash
-# Redis memory usage
-redis-cli info memory
-
-# Filesystem cache size
-du -sh /path/to/cache
-```
+---
 
 ## Examples
 
-### Laravel Integration
+### Laravel Integration (Manual Binding)
 
 ```php
-// In a controller
-use JOOservices\Client\Factory\Factory;
+// AppServiceProvider.php
+use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Cache\RedisCache;
+use JOOservices\Client\Cache\Config\RedisCacheConfig;
 
-class ApiController extends Controller
-{
-    public function getUsers()
-    {
-        $factory = (new Factory())
-            ->enableCache()  // Uses config from .env
-            ->enableLogging();
-
-        $result = $factory->make();
-        $response = $result->get('https://api.example.com/users');
-
-        return response()->json(json_decode($response->getBody()));
-    }
-}
+$this->app->singleton(ClientBuilder::class, function ($app) {
+    $cacheConfig = new RedisCacheConfig(
+        host: env('REDIS_HOST', '127.0.0.1'),
+        prefix: 'joo_client:'
+    );
+    
+    return ClientBuilder::create()
+        ->withCache(new RedisCache($cacheConfig));
+});
 ```
 
 ### Different TTL for Different Endpoints
 
 ```php
-$factory = (new Factory())->enableCache();
-$result = $factory->make();
-
 // Cache user list for 5 minutes
-$users = $result->get('/users', ['cache_ttl' => 300]);
+$users = $client->get('/users', ['cache_ttl' => 300]);
 
 // Cache product catalog for 1 hour
-$products = $result->get('/products', ['cache_ttl' => 3600]);
+$products = $client->get('/products', ['cache_ttl' => 3600]);
 
 // Don't cache orders
-$orders = $result->get('/orders', ['no_cache' => true]);
+$orders = $client->get('/orders', ['no_cache' => true]);
 ```
 
-### Using Both Redis and Filesystem
-
-```php
-// Production: Use Redis
-if (app()->environment('production')) {
-    $config['cache']['driver'] = 'redis';
-}
-
-// Development: Use Filesystem
-if (app()->environment('local')) {
-    $config['cache']['driver'] = 'filesystem';
-}
-
-$factory = (new Factory())->enableCache($config);
-```
+---
 
 ## Testing
 
 ```php
 // tests/Feature/ApiCachingTest.php
 use Tests\TestCase;
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Cache\FilesystemCache;
 
 class ApiCachingTest extends TestCase
 {
     public function test_responses_are_cached()
     {
-        $factory = (new Factory())->enableCache([
-            'cache' => [
-                'enabled' => true,
-                'driver' => 'filesystem',
-                'filesystem' => [
-                    'path' => storage_path('framework/cache/test'),
-                ],
-            ],
-        ]);
-
-        $result = $factory->make();
+        $cache = new FilesystemCache('/tmp/test-cache');
+        
+        $client = ClientBuilder::create()
+            ->withCache($cache)
+            ->build();
 
         // Make same request twice
-        $response1 = $result->get('https://api.example.com/test');
-        $response2 = $result->get('https://api.example.com/test');
+        $response1 = $client->get('https://api.example.com/test');
+        $response2 = $client->get('https://api.example.com/test');
 
         // Both should return same data
         $this->assertEquals(
@@ -462,16 +296,18 @@ class ApiCachingTest extends TestCase
 }
 ```
 
+---
+
 ## Conclusion
 
 JOOClient's caching feature provides:
-- ✅ Easy configuration via .env
-- ✅ Multiple driver support (Redis & Filesystem)
+- ✅ Simple PSR-16 integration
+- ✅ Built-in Redis & Filesystem support
 - ✅ Respects HTTP cache headers
-- ✅ SOLID architecture
-- ✅ Production-ready
+- ✅ PRODUCTION-READY
 
 Choose Redis for performance and scalability, or Filesystem for simplicity!
+
 
 
 

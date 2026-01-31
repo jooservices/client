@@ -69,23 +69,14 @@ JOOCLIENT_MONOLOG_FORMATTER=json  # Optional: use JSON format
 ### Via Code
 
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
 
-$factory = (new Factory())->enableLogging([
-    'logging' => [
-        'enabled' => true,
-        'driver' => 'monolog',
-        'connection' => [
-            'monolog' => [
-                'path' => '/path/to/logs',
-                'filename' => 'jooclient.log',
-                'rotate_enabled' => true,
-                'rotate_max_files' => 7,
-                'level' => 'info',
-            ],
-        ],
-    ],
-]);
+$client = ClientBuilder::create()
+    ->withDefaultLogging(
+        domain: 'jooclient', 
+        path: '/path/to/logs/jooclient.log'
+    )
+    ->build();
 ```
 
 ---
@@ -95,74 +86,30 @@ $factory = (new Factory())->enableLogging([
 ### Basic Usage
 
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
 
-// Uses config from .env
-$factory = (new Factory())->enableLogging();
-$result = $factory->make();
+$client = ClientBuilder::create()
+    ->withDefaultLogging('my-app')
+    ->build();
 
 // All requests are logged to file
-$response = $result->get('https://api.example.com/users');
-
-// Flush any buffered logs (if applicable)
-$result->flushLogger();
+$response = $client->get('https://api.example.com/users');
 ```
 
-### With JSON Formatting
+### With Custom Logger
 
-```env
-JOOCLIENT_MONOLOG_FORMATTER=json
+```php
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use JOOservices\Client\Client\ClientBuilder;
+
+$log = new Logger('custom-channel');
+$log->pushHandler(new StreamHandler('/path/to/my.log', Logger::WARNING));
+
+$client = ClientBuilder::create()
+    ->withLogger($log, logBodies: true)
+    ->build();
 ```
-
-This will log in JSON format:
-
-```json
-{
-  "message": "Mac.local GuzzleHttp/7 - [06/Nov/2025:03:00:00 +0000] \"GET /users HTTP/1.1\" 200",
-  "context": {
-    "request": "[object:GuzzleHttp\\Psr7\\Request]",
-    "response": "[object:GuzzleHttp\\Psr7\\Response]"
-  },
-  "level": 200,
-  "level_name": "INFO",
-  "channel": "jooclient",
-  "datetime": "2025-11-06T03:00:00.000000+00:00",
-  "extra": []
-}
-```
-
-### With File Rotation
-
-When `rotate_enabled` is `true`, Monolog uses `RotatingFileHandler` which:
-
-1. **Creates daily log files** with date suffixes
-   - Example: `jooclient-2025-11-06.log`
-   
-2. **Automatically rotates logs** at midnight
-
-3. **Keeps only N files** (specified by `rotate_max_files`)
-
-4. **Deletes oldest logs** when limit is reached
-
-**Example:**
-```
-logs/
-├── jooclient-2025-11-01.log  (deleted - older than 7 days)
-├── jooclient-2025-11-05.log
-├── jooclient-2025-11-06.log  (today)
-└── jooclient-2025-11-07.log  (tomorrow)
-```
-
-### Without File Rotation
-
-When `rotate_enabled` is `false` (default), Monolog uses `StreamHandler` which:
-
-1. **Writes to a single file** (no date suffix)
-   - Example: `jooclient.log`
-
-2. **Appends continuously** to the same file
-
-3. **No automatic deletion** (file grows indefinitely)
 
 ---
 
@@ -181,174 +128,26 @@ Monolog supports 8 log levels (RFC 5424):
 | **ALERT** | 550 | Action must be taken immediately |
 | **EMERGENCY** | 600 | System is unusable |
 
-**Configuration:**
-
-```env
-JOOCLIENT_MONOLOG_LEVEL=info  # Only logs INFO and above
-```
-
----
-
-## Examples
-
-### 1. Basic File Logging
-
-```php
-$factory = (new Factory())->enableLogging([
-    'logging' => [
-        'enabled' => true,
-        'driver' => 'monolog',
-        'connection' => [
-            'monolog' => [
-                'path' => storage_path('logs'),
-                'filename' => 'api-requests.log',
-                'level' => 'info',
-            ],
-        ],
-    ],
-]);
-
-$result = $factory->make();
-$response = $result->get('https://api.example.com/data');
-```
-
-**Output (`logs/api-requests.log`):**
-```
-[2025-11-06 03:00:00] jooclient.INFO: Mac.local GuzzleHttp/7 - [06/Nov/2025:03:00:00 +0000] "GET /data HTTP/1.1" 200
-```
-
-### 2. JSON Logging with Rotation
-
-```php
-$factory = (new Factory())->enableLogging([
-    'logging' => [
-        'enabled' => true,
-        'driver' => 'monolog',
-        'connection' => [
-            'monolog' => [
-                'path' => '/var/log/app',
-                'filename' => 'http-requests.log',
-                'rotate_enabled' => true,
-                'rotate_max_files' => 30,  // Keep 30 days
-                'level' => 'debug',
-                'formatter' => 'json',
-            ],
-        ],
-    ],
-]);
-```
-
-**Output (`/var/log/app/http-requests-2025-11-06.log`):**
-```json
-{"message":"...","context":{...},"level":200,"level_name":"INFO",...}
-```
-
-### 3. Laravel Integration
-
-```php
-// In a controller
-use JOOservices\Client\Factory\Factory;
-
-class ApiController extends Controller
-{
-    public function fetchData()
-    {
-        $factory = (new Factory())->enableLogging();
-        $result = $factory->make();
-        
-        $response = $result->get('https://api.example.com/data');
-        $result->flushLogger();
-        
-        return response()->json(json_decode($response->getBody()));
-    }
-}
-```
-
-### 4. Different Log Levels for Different Environments
-
-```php
-// config/jooclient.php
-'logging' => [
-    'connection' => [
-        'monolog' => [
-            'level' => app()->environment('production') ? 'warning' : 'debug',
-        ],
-    ],
-],
-```
-
 ---
 
 ## Best Practices
 
-### 1. Enable Rotation in Production
+### 1. Use JSON Format for Log Aggregation
 
-```env
-# Production
-JOOCLIENT_MONOLOG_ROTATE_ENABLED=true
-JOOCLIENT_MONOLOG_ROTATE_MAX_FILES=30
-```
+When using `withDefaultLogging`, the logger is configured to use a standard format. For custom formatting, inject your own Logger instance.
 
-**Why?**
-- Prevents log files from growing indefinitely
-- Automatic cleanup of old logs
-- Saves disk space
-
-### 2. Use Appropriate Log Levels
-
-```env
-# Development
-JOOCLIENT_MONOLOG_LEVEL=debug
-
-# Staging
-JOOCLIENT_MONOLOG_LEVEL=info
-
-# Production
-JOOCLIENT_MONOLOG_LEVEL=warning
-```
-
-**Why?**
-- Debug logs can be very verbose
-- Production should only log important events
-- Reduces log file size and improves performance
-
-### 3. Use JSON Format for Log Aggregation
-
-```env
-JOOCLIENT_MONOLOG_FORMATTER=json
-```
-
-**Why?**
-- Easier to parse with log aggregation tools (ELK, Splunk, etc.)
-- Structured data for better analysis
-- Consistent format for automated processing
-
-### 4. Organize Logs by Purpose
+### 2. Organize Logs by Purpose
 
 ```php
 // API requests
-$apiFactory = (new Factory())->enableLogging([
-    'logging' => [
-        'connection' => [
-            'monolog' => [
-                'path' => storage_path('logs/api'),
-                'filename' => 'external-requests.log',
-            ],
-        ],
-    ],
-]);
+$apiClient = ClientBuilder::create()
+    ->withDefaultLogging('api-requests', '/logs/api.log')
+    ->build();
 
 // Webhook callbacks
-$webhookFactory = (new Factory())->enableLogging([
-    'logging' => [
-        'connection' => [
-            'monolog' => [
-                'path' => storage_path('logs/webhooks'),
-                'filename' => 'webhook-calls.log',
-            ],
-        ],
-    ],
-]);
+$webhookClient = ClientBuilder::create()
+    ->withDefaultLogging('webhooks', '/logs/webhooks.log')
+    ->build();
 ```
 
 ### 5. Monitor Log File Sizes

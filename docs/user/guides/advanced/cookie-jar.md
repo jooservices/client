@@ -24,64 +24,36 @@ Cookie jar management allows you to persist and manage cookies across multiple r
 
 ### Basic Usage
 
+JOOClient uses Guzzle's underlying cookie management. You can enable a shared cookie jar for the client, allowing cookies to persist across requests made by that client instance.
+
 ```php
-use JOOservices\Client\Factory\Factory;
-use JOOservices\Client\Cookies\CookieJarManager;
+use JOOservices\Client\Client\ClientBuilder;
 
-$manager = new CookieJarManager();
-$jar = $manager->create();
+// Enable cookies (creates a shared in-memory cookie jar)
+$client = ClientBuilder::create()
+    ->withOption('cookies', true)
+    ->build();
 
-$factory = (new Factory())
-    ->withCookieJar($jar);
-
-$client = $factory->make();
-
-// Cookies are automatically managed
-$response = $client->get('https://api.example.com/login');
-$response = $client->get('https://api.example.com/profile'); // Uses cookies from login
+// Cookies are automatically handled
+$response = $client->post('https://api.example.com/login', [...]);
+$response = $client->get('https://api.example.com/profile'); // Session cookie sent automatically
 ```
 
 ---
 
-## Cookie Jar Types
+## Persistent Cookies
 
-### In-Memory Cookie Jar
-
-Cookies stored in memory (lost when script ends):
+To persist cookies to disk (e.g., for CLI tools or long-running processes), pass a `GuzzleHttp\Cookie\FileCookieJar`.
 
 ```php
-$manager = new CookieJarManager();
-$jar = $manager->create();
+use JOOservices\Client\Client\ClientBuilder;
+use GuzzleHttp\Cookie\FileCookieJar;
 
-$factory = (new Factory())
-    ->withCookieJar($jar);
-```
+$jar = new FileCookieJar('/path/to/cookies.json', true);
 
-### Persistent Cookie Jar
-
-Cookies stored in file (persists across requests):
-
-```php
-$manager = new CookieJarManager();
-$jar = $manager->createPersistent('/path/to/cookies.txt');
-
-$factory = (new Factory())
-    ->withCookieJar($jar);
-```
-
-### From Array
-
-Create cookie jar from array:
-
-```php
-$manager = new CookieJarManager();
-$jar = $manager->fromArray([
-    'session_id' => 'abc123',
-    'user_token' => 'xyz789',
-], 'example.com');
-
-$factory = (new Factory())
-    ->withCookieJar($jar);
+$client = ClientBuilder::create()
+    ->withOption('cookies', $jar)
+    ->build();
 ```
 
 ---
@@ -91,13 +63,9 @@ $factory = (new Factory())
 ### 1. Session Management
 
 ```php
-$manager = new CookieJarManager();
-$jar = $manager->createPersistent(storage_path('cookies/session.txt'));
-
-$factory = (new Factory())
-    ->withCookieJar($jar);
-
-$client = $factory->make();
+$client = ClientBuilder::create()
+    ->withOption('cookies', true)
+    ->build();
 
 // Login (sets session cookie)
 $client->post('https://api.example.com/login', [
@@ -108,86 +76,54 @@ $client->post('https://api.example.com/login', [
 $response = $client->get('https://api.example.com/profile');
 ```
 
-### 2. Multiple Domains
+### 2. Manual Cookie Management
+
+You can also pass a `CookieJar` instance to manipulate cookies manually.
 
 ```php
-$manager = new CookieJarManager();
+use GuzzleHttp\Cookie\CookieJar;
 
-// Create separate jars for different domains
-$apiJar = $manager->create();
-$webJar = $manager->create();
+$jar = new CookieJar();
+$jar->setCookie(new SetCookie([
+    'Name' => 'foo',
+    'Value' => 'bar',
+    'Domain' => 'api.example.com'
+]));
 
-$apiFactory = (new Factory())->withCookieJar($apiJar);
-$webFactory = (new Factory())->withCookieJar($webJar);
+$client = ClientBuilder::create()
+    ->withOption('cookies', $jar)
+    ->build();
 ```
 
 ---
 
 ## Best Practices
 
-### 1. Use Persistent Jars for Sessions
+### 1. Secure Cookie Storage
+
+If using file-based persistence, ensure the file is stored in a secure location with restricted permissions (e.g., `chmod 600`).
+
+### 2. Session Isolation
+
+Create separate client instances (with separate cookie jars) for different users or sessions to ensure isolation.
 
 ```php
-// Good: Persistent jar for session management
-$jar = $manager->createPersistent(storage_path('cookies/session.txt'));
-
-// Bad: In-memory jar (cookies lost on script end)
-$jar = $manager->create();
-```
-
-### 2. Separate Jars for Different Services
-
-```php
-// Create separate jars for isolation
-$apiJar = $manager->createPersistent(storage_path('cookies/api.txt'));
-$webJar = $manager->createPersistent(storage_path('cookies/web.txt'));
-```
-
-### 3. Secure Cookie Storage
-
-```php
-// Store cookies in secure location
-$jar = $manager->createPersistent(
-    storage_path('app/secure/cookies.txt')
-);
-
-// Set appropriate file permissions
-chmod(storage_path('app/secure/cookies.txt'), 0600);
+$userAClient = ClientBuilder::create()->withOption('cookies', true)->build();
+$userBClient = ClientBuilder::create()->withOption('cookies', true)->build();
 ```
 
 ---
 
 ## API Reference
 
-### CookieJarManager Methods
+Cookie management is handled via Guzzle's `cookies` option.
 
 ```php
-$manager->create(array $cookies = []): CookieJarInterface
-$manager->createPersistent(string $filePath): CookieJarInterface
-$manager->fromArray(array $cookies, string $domain): CookieJarInterface
+// Request Option
+$client->get('/url', [
+    'cookies' => $jar // Use specific jar for this request
+]);
 ```
-
-### Factory Methods
-
-```php
-$factory->withCookieJar(CookieJarInterface $cookieJar): self
-```
-
----
-
-## Troubleshooting
-
-### Cookies Not Persisting
-
-1. **Check file permissions:** Ensure cookie file is writable
-2. **Check path:** Verify file path is correct
-3. **Check domain:** Ensure cookies are set for correct domain
-
-### Cookies Not Sent
-
-1. **Check jar:** Verify cookie jar is set on factory
-2. **Check domain:** Ensure request domain matches cookie domain
-3. **Check expiration:** Verify cookies haven't expired
 
 ---
 

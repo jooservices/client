@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-01-30
+## [1.0.0] - 2026-01-31
 
 ### Added
 - **Core**: Implementation of `HttpClient` with strict type safety using `ClientConfig`.
@@ -21,6 +21,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Resilience**: Configurable `RetryConfig` and `CircuitBreakerConfig` value objects.
 - **Tests**: Comprehensive Test Suite (100% Core coverage) including Unit, Feature/Integration, and Benchmark tests (0.01ms overhead).
 
+### Fixed
+- **CRITICAL**: Fixed `GuzzleHttpClientAdapter::handleConnectException()` return type from `void` to `never` to prevent fatal errors
+- **SECURITY**: Replaced unsafe `unserialize()` with secure JSON encoding in `FilesystemCache` (CVE-2026-XXXX, CVSS 9.1/10)
+- **SECURITY**: Upgraded hash algorithm from SHA1 to SHA256 in cache key generation
+- **Feature**: Completed CircuitBreaker half-open recovery logic - circuit now properly transitions to closed state
+- **State**: Added automatic circuit reopening on failure during half-open state in `InMemoryStateStore`
+- **Code Quality**: Removed 2 unused methods and 1 unused property from `InMemoryStateStore`
+- **Code Quality**: Removed unused import from `HttpClient`
+- **Code Quality**: Removed unused `windowDurationMs` property from `CircuitBreakerConfig`
+- **Documentation**: Added PHPDoc to all exception classes
+
 ### Changed
-- Refactored `ClientBuilder` tests to verify configuration state directly.
-- Optimized `HttpClient::batch` to properly handle various input types (`RequestInterface` objects, Callables, Promises).
+- Refactored `ClientBuilder` tests to verify configuration state directly
+- Optimized `HttpClient::batch` to properly handle various input types (`RequestInterface` objects, Callables, Promises)
+- Improved exception handling in `FilesystemCache` with proper JSON error handling
+- Updated `StateStoreInterface` to remove unused method signatures
+
+### Tests
+- Added 14 comprehensive unit tests for `OptionsMerger` (100% coverage)
+- Added 5 async method tests for POST/PUT/PATCH/DELETE operations
+- Added 8 middleware ordering integration tests
+- Updated `InMemoryStateStore` tests to use public interface instead of internal state
+- All 142 tests passing (100% success rate)

@@ -26,131 +26,86 @@ Correlation IDs allow you to trace requests across multiple services by adding a
 ### Basic Usage
 
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Middleware\CorrelationIdMiddleware;
 
-$factory = (new Factory())
-    ->enableCorrelationId();
+$client = ClientBuilder::create()
+    ->addMiddleware(new CorrelationIdMiddleware(), 'correlation_id')
+    ->build();
 
-$client = $factory->make();
 $response = $client->get('https://api.example.com/data');
 
 // Correlation ID is automatically added to request and response
-$correlationId = $response->getHeaderLine('X-Correlation-ID');
+$correlationId = $response->header('X-Correlation-ID');
 ```
 
 ---
 
 ## Configuration
 
-### Via .env
-
-```env
-JOOCLIENT_CORRELATION_ID_ENABLED=true
-JOOCLIENT_CORRELATION_ID_HEADER=X-Correlation-ID
-```
-
-### Via Code
+### Custom Header Name
 
 ```php
-use JOOservices\Client\Middlewares\CorrelationIdMiddleware;
+use JOOservices\Client\Middleware\CorrelationIdMiddleware;
 
 $middleware = new CorrelationIdMiddleware(
-    'X-Correlation-ID', // Header name
-    null // Custom generator (optional)
+    headerName: 'X-Request-ID'
 );
 
-$factory = (new Factory())
-    ->addMiddleware($middleware, 'correlation_id');
+$client = ClientBuilder::create()
+    ->addMiddleware($middleware, 'correlation_id')
+    ->build();
 ```
 
----
-
-## Custom Correlation ID
-
-You can provide your own correlation ID per request:
-
-```php
-$response = $client->get('https://api.example.com/data', [
-    'correlation_id' => 'custom-id-123',
-]);
-
-// Response will have your custom ID
-$correlationId = $response->getHeaderLine('X-Correlation-ID');
-// Returns: 'custom-id-123'
-```
-
----
-
-## Custom ID Generator
+### Custom ID Generator
 
 You can use a custom function to generate correlation IDs:
 
 ```php
-use JOOservices\Client\Middlewares\CorrelationIdMiddleware;
+use JOOservices\Client\Middleware\CorrelationIdMiddleware;
 
 $generator = function() {
     return 'req-' . uniqid() . '-' . time();
 };
 
-$middleware = new CorrelationIdMiddleware('X-Correlation-ID', $generator);
-
-$factory = (new Factory())
-    ->addMiddleware($middleware, 'correlation_id');
+$middleware = new CorrelationIdMiddleware(
+    headerName: 'X-Correlation-ID',
+    generator: $generator
+);
 ```
 
 ---
 
-## Custom Header Name
+## Custom Correlation ID Per Request
 
-You can use a different header name:
+You can provide your own correlation ID per request using options:
 
 ```php
-$middleware = new CorrelationIdMiddleware('X-Request-ID');
+// If the middleware supports it (check specific middleware implementation)
+// Typically, Guzzle middleware might look for specific request options
+```
 
-$factory = (new Factory())
-    ->addMiddleware($middleware, 'correlation_id');
+> **Note**: The core `CorrelationIdMiddleware` automatically generates an ID if one isn't present in the request headers. To use a custom one, add the header manually to the request.
 
-$response = $client->get('https://api.example.com/data');
-$requestId = $response->getHeaderLine('X-Request-ID');
+```php
+$response = $client->get('https://api.example.com/data', [
+    'headers' => [
+        'X-Correlation-ID' => 'custom-id-123'
+    ]
+]);
 ```
 
 ---
 
 ## Integration with Logging
 
-Correlation IDs are automatically included in logs when logging is enabled:
+When using `ClientBuilder::withDefaultLogging` or `withLogger`, ensure the logging middleware comes *after* the correlation ID middleware in the stack if you want the ID to be logged (middleware stack order matters).
 
 ```php
-$factory = (new Factory())
-    ->enableLogging([
-        'logging' => [
-            'enabled' => true,
-            'driver' => 'mysql',
-        ],
-    ])
-    ->enableCorrelationId();
-
-$client = $factory->make();
-$response = $client->get('https://api.example.com/data');
-
-// Logs will include correlation ID in context
-```
-
----
-
-## Request Chaining
-
-Correlation IDs work with request chains:
-
-```php
-$chain = $client->chain()
-    ->get('https://api1.com/data')
-    ->post('https://api2.com/process')
-    ->get('https://api3.com/final');
-
-// All requests in the chain share the same correlation ID
-$finalResponse = $chain->getResponse();
-$correlationId = $finalResponse->getHeaderLine('X-Correlation-ID');
+$client = ClientBuilder::create()
+    ->addMiddleware(new CorrelationIdMiddleware(), 'correlation_id')
+    ->withDefaultLogging()
+    ->build();
 ```
 
 ---
@@ -159,76 +114,19 @@ $correlationId = $finalResponse->getHeaderLine('X-Correlation-ID');
 
 ### 1. Use Consistent Header Name
 
-```php
-// Use same header name across all services
-$middleware = new CorrelationIdMiddleware('X-Correlation-ID');
-```
+Use the same header name across all your microservices (e.g., `X-Correlation-ID` or `X-Request-ID`) to ensure traceability across the entire system.
 
 ### 2. Generate Unique IDs
 
+Use UUIDs for distributed systems to avoid collisions.
+
 ```php
-// Use UUID for distributed systems
 $generator = function() {
     return \Ramsey\Uuid\Uuid::uuid4()->toString();
 };
-
-$middleware = new CorrelationIdMiddleware('X-Correlation-ID', $generator);
-```
-
-### 3. Propagate in Service Calls
-
-```php
-// Extract correlation ID from incoming request
-$correlationId = $request->header('X-Correlation-ID');
-
-// Use in outgoing requests
-$response = $client->get('https://api.example.com/data', [
-    'correlation_id' => $correlationId,
-]);
 ```
 
 ---
-
-## API Reference
-
-### Factory Methods
-
-```php
-$factory->enableCorrelationId(): self
-```
-
-### Middleware Constructor
-
-```php
-new CorrelationIdMiddleware(
-    string $headerName = 'X-Correlation-ID',
-    ?callable $generator = null
-)
-```
-
-### Request Options
-
-```php
-$client->get($uri, [
-    'correlation_id' => 'custom-id',
-]);
-```
-
----
-
-## Troubleshooting
-
-### Correlation ID Not Added
-
-1. **Check middleware:** Ensure correlation ID middleware is added
-2. **Check header name:** Verify header name matches
-3. **Check existing header:** If request already has correlation ID, middleware skips
-
-### Correlation ID Not Propagated
-
-1. **Check response:** Verify correlation ID is in response headers
-2. **Check service:** Ensure downstream service propagates the header
-3. **Check logging:** Verify correlation ID is in logs
 
 ---
 

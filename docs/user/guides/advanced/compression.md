@@ -24,142 +24,71 @@ Compression middleware automatically adds `Accept-Encoding` headers to requests,
 
 ### Basic Usage
 
+JOOClient (via Guzzle) automatically handles compression by default. It sends `Accept-Encoding: gzip, deflate` and decompresses responses automatically.
+
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
 
-$factory = (new Factory())
-    ->enableCompression(['gzip', 'deflate']);
+// Default behavior: Compression enabled
+$client = ClientBuilder::create()->build();
 
-$client = $factory->make();
 $response = $client->get('https://api.example.com/data');
+$content = (string) $response->getBody(); // Automatically decompressed
 ```
 
 ---
 
-## Supported Encodings
+## Configuration
 
-### Gzip
+### Disable Compression
 
-Most common compression format:
+To disable automatic decompression (and prevent sending the `Accept-Encoding` header):
 
 ```php
-$factory = (new Factory())
-    ->enableCompression(['gzip']);
+$client = ClientBuilder::create()
+    ->withOption('decode_content', false)
+    ->build();
 ```
 
-### Deflate
+### Custom Decoding
 
-Alternative compression format:
-
-```php
-$factory = (new Factory())
-    ->enableCompression(['deflate']);
-```
-
-### Brotli
-
-Modern compression format (requires server support):
+You can pass a specific encoding to `decode_content` to only allow that encoding.
 
 ```php
-$factory = (new Factory())
-    ->enableCompression(['br', 'gzip', 'deflate']);
-```
-
-### Multiple Encodings
-
-Request multiple encodings (server chooses best):
-
-```php
-$factory = (new Factory())
-    ->enableCompression(['br', 'gzip', 'deflate']);
-```
-
----
-
-## How It Works
-
-### Request Flow
-
-1. Client adds `Accept-Encoding: gzip, deflate` header
-2. Server compresses response if supported
-3. Server adds `Content-Encoding: gzip` header
-4. Guzzle automatically decompresses response
-
-### Automatic Decompression
-
-Guzzle automatically decompresses responses, so you don't need to handle decompression manually:
-
-```php
-$response = $client->get('https://api.example.com/data');
-$content = $response->getContent(); // Already decompressed
+// Only allow gzip
+$client = ClientBuilder::create()
+    ->withOption('decode_content', 'gzip')
+    ->build();
 ```
 
 ---
 
 ## Best Practices
 
-### 1. Use Multiple Encodings
+### 1. Trust the Defaults
 
-```php
-// Good: Request multiple encodings
-$factory = (new Factory())
-    ->enableCompression(['br', 'gzip', 'deflate']);
+Modern web servers and Guzzle handle compression negotiation efficiently. You rarely need to configure this manually.
 
-// Server will choose the best supported encoding
-```
+### 2. Check Response Headers
 
-### 2. Check Response Encoding
+If debugging, you can check if the response was actually compressed:
 
 ```php
 $response = $client->get('https://api.example.com/data');
 
-if ($response->hasHeader('Content-Encoding')) {
-    $encoding = $response->getHeaderLine('Content-Encoding');
-    echo "Response compressed with: {$encoding}\n";
-}
-```
-
-### 3. Combine with Caching
-
-```php
-// Compression + caching for maximum efficiency
-$factory = (new Factory())
-    ->enableCache([...])
-    ->enableCompression(['gzip', 'deflate']);
+// Note: If decode_content is true, Content-Encoding header might be removed after decoding
+// depending on the underlying handler.
 ```
 
 ---
 
 ## API Reference
 
-### Factory Methods
+Compression is handled via Guzzle's `decode_content` option.
 
-```php
-$factory->enableCompression(array $encodings = ['gzip', 'deflate']): self
-```
-
-### Supported Encodings
-
-- `gzip` - Gzip compression
-- `deflate` - Deflate compression
-- `br` - Brotli compression (requires server support)
-
----
-
-## Troubleshooting
-
-### Compression Not Working
-
-1. **Check header:** Verify `Accept-Encoding` header is sent
-2. **Check server:** Ensure server supports compression
-3. **Check response:** Verify `Content-Encoding` header in response
-
-### Performance Issues
-
-Compression adds minimal overhead. If you experience issues:
-1. Disable compression for specific requests
-2. Use fewer encoding options
-3. Check server compression settings
+- `true` (default): Automatic `Accept-Encoding` and decompression.
+- `false`: No `Accept-Encoding`, no decompression.
+- `string`: Specify encoding (e.g., `'gzip'`).
 
 ---
 

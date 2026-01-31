@@ -4,136 +4,95 @@ Complete reference for all classes in the JOOClient package.
 
 ## Core Classes
 
-### Jooclient
-**Location**: `src/Jooclient.php`
-**Type**: Entry point / Static factory
-**Purpose**: Convert Laravel configuration to configured Factory
-
-**Key Method**:
-- `fromConfig(array $config): Factory` - Build Factory from config
-
-**Usage**:
-```php
-$factory = Jooclient::fromConfig(config('jooclient'));
-```
-
----
-
-### Factory
-**Location**: `src/Factory/Factory.php`
-**Type**: Immutable builder
-**Purpose**: Build configured Guzzle clients with middleware
-
-**Highlights**:
-- Provides a fluent, immutable API for building preconfigured `GuzzleHttp\Client` instances.
-- Supports retries, rich logging options (MySQL, MongoDB, Monolog, and the multi-logger aggregator), caching, custom middleware, and request history capture for tests.
-- Follows the Immutable Builder pattern—every mutator returns a cloned instance to avoid side effects.
-- Designed to be thread-safe and allow reuse of base configurations via method chaining.
-- Exposes helpers such as `getHistory()` to inspect mocked requests and `make()` to produce a `Client` wrapper with the configured logger.
+### ClientBuilder
+**Location**: `src/Client/ClientBuilder.php`
+**Type**: Builder Pattern
+**Purpose**: Fluent interface for constructing configured `HttpClient` instances.
 
 **Key Methods**:
-- `addOptions(array $options): self` - Add Guzzle options
-- `enableRetries(int $max, int $delay, int $minCode): self` - Enable retry logic
-- `enableDbLogging(...): self` - Enable MySQL logging
-- `enableMongoDbLogging(...): self` - Enable MongoDB logging
-- `enableLogging(LoggerInterface $logger): self` - Enable PSR-3 logging
-- `enableCache(callable $middleware): self` - Add cache middleware
-- `addMiddleware(callable $mw, string $name): self` - Add custom middleware
-- `fakeResponses(array $responses): self` - Mock responses for testing
-- `make(): Client` - Create the client
+- `create(): self` - Static factory method.
+- `withBaseUri(string $uri): self` - Set base URI.
+- `withTimeout(int $seconds): self` - Set request timeout.
+- `withHeader(string $name, string $value): self` - Add default header.
+- `withDefaultLogging(string $domain, ?string $path = null): self` - Enable Monolog logging.
+- `withRetry(RetryConfig $config): self` - Enable retries.
+- `withCircuitBreaker(CircuitBreakerConfig $config): self` - Enable circuit breaker.
+- `withCache(CacheInterface $cache, int $ttl): self` - Enable caching.
+- `withOption(string $key, mixed $value): self` - Set Guzzle option.
+- `build(): HttpClientInterface` - Create the client.
 
 **Usage**:
 ```php
-$factory = (new Factory())
-    ->addOptions(['timeout' => 30])
-    ->enableRetries(3, 1, 500)
-    ->enableDbLogging('127.0.0.1', 3306, 'logs');
-
-$result = $factory->make();
-```
-
-**Testing with Mocks**:
-```php
-$factory = (new Factory())
-    ->fakeResponses([new Response(200, [], 'OK')])
-    ->enableLogging(['logging' => ['enabled' => true, 'driver' => 'mysql']]);
-
-$result = $factory->make();
-$result->get('/test'); // Uses mocked response
-$history = $result->getHistory();
+$client = ClientBuilder::create()
+    ->withBaseUri('https://api.example.com')
+    ->build();
 ```
 
 ---
 
-### Client
-**Location**: `src/Factory/Client.php`
-**Type**: Client wrapper
-**Purpose**: Encapsulate client + logger + factory
-
-**Properties**:
-- `logger`: Logger instance (or null) - public readonly
-
-**Note**: The `client` and `factory` properties are now private to maintain encapsulation. Use the public methods instead.
+### HttpClient
+**Location**: `src/Client/HttpClient.php`
+**Type**: Client Implementation
+**Purpose**: Executes HTTP requests.
 
 **Methods**:
-- `getLogger(): ?LoggerInterface` - Get logger
-- `flushLogger(): void` - Flush buffered logs
-- `getGuzzleClient(): GuzzleClient` - Get underlying Guzzle client (for testing/internal use)
-- `getFactory(): Factory` - Get factory instance (for internal use)
-- `getHistory(): array` - Get request history (for testing)
-- `get(string|UriInterface $uri, array $options = []): ResponseWrapper` - GET request
-- `post(string|UriInterface $uri, array $options = []): ResponseWrapper` - POST request
-- `request(string $method, string|UriInterface $uri, array $options = []): ResponseWrapper` - Generic request
+- `get(string $uri, array $options = []): ResponseWrapper`
+- `post(string $uri, array $options = []): ResponseWrapper`
+- `put(string $uri, array $options = []): ResponseWrapper`
+- `delete(string $uri, array $options = []): ResponseWrapper`
+- `patch(string $uri, array $options = []): ResponseWrapper`
+- `request(string $method, string $uri, array $options = []): ResponseWrapper`
+
+All methods return a `ResponseWrapper`.
+
+---
+
+### ClientConfig
+**Location**: `src/ValueObjects/ClientConfig.php`
+**Type**: Value Object
+**Purpose**: Holds immutable configuration for the client.
+
+**Properties**:
+- `baseUri`: string
+- `timeout`: int
+- `connectTimeout`: int
+- `headers`: array
+- `verifySsl`: bool
+- `httpErrors`: bool
+- `options`: array
 
 ---
 
 ## Configuration Classes
 
-### ConfigParser
-**Location**: `src/Config/ConfigParser.php`
-**Purpose**: Parse config arrays to typed objects
+### RetryConfig
+**Location**: `src/Resilience/RetryConfig.php`
+**Type**: Value Object
+**Purpose**: Configuration for RetryMiddleware.
 
-**Methods**:
-- `parseRetriesConfig(array $config): ?RetriesConfig`
-- `parseDatabaseConfig(array $config): ?DatabaseConnectionConfig`
-- `parseMongoDbConfig(array $config): ?MongoDbConfig`
-- `isLoggingEnabled(array $config): bool`
-- `getLoggingDriver(array $config): string`
+**Properties**:
+- `maxAttempts`: int
+- `delaySeconds`: int
+- `minErrorCode`: int
+
+### CircuitBreakerConfig
+**Location**: `src/Resilience/CircuitBreakerConfig.php`
+**Type**: Value Object
+**Purpose**: Configuration for CircuitBreakerMiddleware.
+
+**Properties**:
+- `failureThreshold`: int
+- `recoveryTimeSeconds`: int
 
 ---
 
-### DatabaseConnectionConfig
-**Location**: `src/Logging/Config/DatabaseConnectionConfig.php`
-**Type**: Value object (immutable)
-**Purpose**: MySQL connection configuration
+## Middleware Classes
 
-**Properties**:
-- `host`, `port`, `database`, `username`, `password`
-- `table`, `batch`, `fallback`
+All middleware implements `JOOservices\Client\Contracts\MiddlewareInterface`.
 
-**Factory Method**:
-- `fromArray(array $config): self` - Create from array with validation
-
----
-
-### MongoDbConfig
-**Location**: `src/Logging/Config/MongoDbConfig.php`
-**Type**: Value object (immutable)
-**Purpose**: MongoDB connection configuration
-
-**Properties**:
-- `dsn`, `database`, `collection`
-- `batch`, `fallback`, `options`
-
-**Factory Method**:
-- `fromArray(array $config): self` - Create from array with validation
-
----
-
-### RetriesConfig
-**Location**: `src/Logging/Config/RetriesConfig.php`
-**Type**: Value object (immutable)
-**Purpose**: Retry behavior configuration
-
-**Properties**:
-- `maxAttempts`, `delaySeconds`, `minErrorCode`
+- **RetryMiddleware**: Handles exponential backoff retries.
+- **CircuitBreakerMiddleware**: Implements circuit breaker pattern.
+- **CacheMiddleware**: Handles response caching.
+- **LoggingMiddleware**: Logs requests and responses.
+- **CorrelationIdMiddleware**: Manages correlation IDs.
+- **InterceptorMiddleware**: Allows modification of requests/responses/errors via callbacks.

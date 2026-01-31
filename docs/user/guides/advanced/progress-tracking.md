@@ -24,18 +24,16 @@ Progress tracking allows you to monitor upload and download progress for HTTP re
 
 ### Basic Usage
 
+JOOClient uses Guzzle's `progress` request option to track upload and download progress.
+
 ```php
-use JOOservices\Client\Factory\Factory;
-use JOOservices\Client\Middlewares\ProgressTrackingMiddleware;
+use JOOservices\Client\Client\ClientBuilder;
 
-$factory = (new Factory())
-    ->addMiddleware(new ProgressTrackingMiddleware(), 'progress');
-
-$client = $factory->make();
+$client = ClientBuilder::create()->build();
 
 // Track download progress
 $response = $client->get('https://api.example.com/large-file', [
-    'progress' => function ($total, $downloaded, $uploaded = 0) {
+    'progress' => function ($total, $downloaded, $uploaded = 0, $uploadTotal = 0) {
         if ($total > 0) {
             $percent = ($downloaded / $total) * 100;
             echo "Download progress: {$percent}% ({$downloaded}/{$total} bytes)\n";
@@ -59,10 +57,10 @@ $response = $client->post('https://api.example.com/upload', [
             'filename' => 'large-file.zip',
         ],
     ],
-    'progress' => function ($total, $downloaded, $uploaded) {
-        if ($total > 0) {
-            $percent = ($uploaded / $total) * 100;
-            echo "Upload progress: {$percent}% ({$uploaded}/{$total} bytes)\n";
+    'progress' => function ($total, $downloaded, $uploaded, $uploadTotal) {
+        if ($uploadTotal > 0) {
+            $percent = ($uploaded / $uploadTotal) * 100;
+            echo "Upload progress: {$percent}% ({$uploaded}/{$uploadTotal} bytes)\n";
         }
     },
 ]);
@@ -109,7 +107,7 @@ function formatProgressBar($current, $total, $width = 50): string
 }
 
 $response = $client->get('https://api.example.com/large-file', [
-    'progress' => function ($total, $downloaded) use ($width = 50) {
+    'progress' => function ($total, $downloaded) use ($width) {
         echo "\r" . formatProgressBar($downloaded, $total, $width);
         flush();
     },
@@ -180,32 +178,27 @@ $response = $client->get('https://api.example.com/large-file', [
 
 ## API Reference
 
-### Progress Callback Signature
+### Progress Option Signature
+
+The `progress` option receives a callable with the following signature:
 
 ```php
-function(int $total, int $downloaded, int $uploaded = 0): void
+function(
+    int $downloadTotal, 
+    int $downloadedBytes, 
+    int $uploadTotal, 
+    int $uploadedBytes
+): void
 ```
 
-**Parameters:**
-- `$total`: Total bytes (0 if unknown)
-- `$downloaded`: Bytes downloaded so far
-- `$uploaded`: Bytes uploaded so far (for uploads)
-
-### Request Options
-
-```php
-$client->get($uri, [
-    'progress' => callable, // Progress callback
-]);
-```
+> **Note**: Guzzle's signature is `($downloadTotal, $downloadedBytes, $uploadTotal, $uploadedBytes)`.
 
 ---
 
 ## Limitations
 
-- Progress tracking requires middleware to be added
-- Some servers may not provide `Content-Length` header (total will be 0)
-- Progress callbacks are called frequently (consider throttling)
+- Progress tracking adds overhead (callbacks called frequently).
+- Some servers may not provide `Content-Length` header (total will be 0).
 
 ---
 

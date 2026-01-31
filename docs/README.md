@@ -1,6 +1,6 @@
 # JOOClient Documentation
 
-Complete documentation for JOOClient - Enhanced Guzzle HTTP Client for Laravel 12.
+Complete documentation for JOOClient - Enterprise-grade Guzzle HTTP Client Wrapper for PHP 8.5+.
 
 ## 🚀 Enterprise Overview and Plan
 - **[Enterprise Overview and Implementation Plan](ENTERPRISE_OVERVIEW.md)** — SSA/SD/PM/BM-ready overview, architecture map, feature What/Why/How, mock-first testing, and phased rollout (Docker-free).

@@ -8,33 +8,40 @@ Complete API reference documentation for JOOClient.
 
 ## Quick Reference
 
-### Factory
+### ClientBuilder
+
+The main entry point for creating clients.
 
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
 
-$factory = new Factory();
-$factory = $factory->enableLogging();
-$factory = $factory->enableCache();
-$factory = $factory->enableRetries(3, 1, 500);
-$result = $factory->make();
+$client = ClientBuilder::create()
+    ->withBaseUri('https://api.example.com')
+    ->withTimeout(30)
+    ->withDefaultLogging('my-app')
+    ->withRetry(new RetryConfig(maxAttempts: 3))
+    ->build();
 ```
 
-### Client
+### HttpClient
+
+The interface you interact with.
 
 ```php
-$response = $result->get('https://api.example.com');
-$response = $result->post('https://api.example.com', ['json' => $data]);
-$response = $result->request('GET', 'https://api.example.com');
+$response = $client->get('/users');
+$response = $client->post('/users', ['json' => $data]);
+$response = $client->request('PUT', '/users/1', ['headers' => ['X-Foo' => 'Bar']]);
 ```
 
 ### ResponseWrapper
 
+The response object returned by client methods.
+
 ```php
-if ($response->isSuccess()) {
-    $content = $response->getContent();
-    $json = $response->getJson();
-    $status = $response->getStatusCode();
+if ($response->successful()) {
+    $content = $response->body();
+    $json = $response->json();
+    $status = $response->status();
 }
 ```
 

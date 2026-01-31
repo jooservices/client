@@ -14,7 +14,7 @@ $builder = ClientBuilder::create();
 $client = $builder->build();
 
 // Make a GET request
-$response = $result->get('https://api.github.com/users/octocat');
+$response = $client->get('https://api.github.com/users/octocat');
 
 // Check if successful
 if ($response->status() === 200) {
@@ -72,7 +72,7 @@ $builder = ClientBuilder::create();
 $client = $builder->build();
 
 try {
-    $response = $result->get('https://api.example.com/data');
+    $response = $client->get('https://api.example.com/data');
     
     if ($response->status() === 200) {
         $data = $response->json();
@@ -85,27 +85,47 @@ try {
 }
 ```
 
-## Via Laravel Service Container
+## Service Container Integration (e.g. Laravel)
+
+JOOClient is framework-agnostic. To use it in a framework like Laravel, you can register it in a ServiceProvider:
+
+```php
+// AppServiceProvider or a dedicated ClientServiceProvider
+
+public function register()
+{
+    $this->app->bind(ClientBuilder::class, function ($app) {
+        return ClientBuilder::create()
+            ->withTimeout(30)
+            ->withDefaultLogging('laravel-app');
+    });
+    
+    // Optional: Bind the built client directly if you prefer
+    $this->app->bind(\JOOservices\Client\Contracts\HttpClientInterface::class, function ($app) {
+        return $app->make(ClientBuilder::class)->build();
+    });
+}
+```
+
+Then inject it into your controllers:
 
 ```php
 namespace App\Http\Controllers;
 
 use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Contracts\HttpClientInterface;
 
 class ApiController extends Controller
 {
     public function __construct(
-        private ClientBuilder $jooclient
+        private ClientBuilder $builder
     ) {}
     
     public function fetchData()
     {
-        $client = $this->jooclient->build();
+        // Build a fresh client or use a pre-built one
+        $client = $this->builder->build();
         $response = $client->get('https://api.example.com/data');
-        
-        if ($response->status() >= 400) {
-            abort(502, 'Upstream service failed');
-        }
         
         return response()->json($response->json());
     }

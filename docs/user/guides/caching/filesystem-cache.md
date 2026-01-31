@@ -20,30 +20,24 @@ JOOCLIENT_CACHE_PATH=/path/to/cache
 ### Code Configuration
 
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Cache\FilesystemCache;
 
-$factory = (new Factory())
-    ->enableCache([
-        'cache' => [
-            'enabled' => true,
-            'driver' => 'filesystem',
-            'ttl' => 3600,
-            'path' => storage_path('cache/jooclient'),
-        ],
-    ]);
+$cache = new FilesystemCache('/path/to/cache/directory');
+
+$client = ClientBuilder::create()
+    ->withCache($cache, defaultTtl: 3600)
+    ->build();
 ```
 
 ## Usage
 
 ```php
-$factory = (new Factory())->enableCache();
-$result = $factory->make();
-
 // First request - cache miss, stores in cache
-$response1 = $result->get('https://api.example.com/data');
+$response1 = $client->get('https://api.example.com/data');
 
 // Second request - cache hit, returns from cache
-$response2 = $result->get('https://api.example.com/data');
+$response2 = $client->get('https://api.example.com/data');
 ```
 
 ## Cache Key Generation
@@ -54,7 +48,11 @@ Cache keys are generated from:
 
 ## TTL (Time To Live)
 
-Default TTL is 3600 seconds (1 hour). Configure via `JOOCLIENT_CACHE_TTL`.
+Default TTL is 3600 seconds (1 hour). Override per request:
+
+```php
+$client->get('/data', ['cache_ttl' => 60]);
+```
 
 ## See Also
 

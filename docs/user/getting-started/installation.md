@@ -15,57 +15,20 @@ Install and configure JOOClient in your Laravel 12 application.
 composer require jooservices/jooclient
 ```
 
-## Step 2: Publish Configuration
+## Step 1: Install Package
 
 ```bash
-php artisan vendor:publish --provider="JOOservices\Client\Providers\JooclientServiceProvider" --tag=config
+composer require jooservices/jooclient
 ```
 
-This creates `config/jooclient.php` in your Laravel application.
+## Step 2: Configure Environment
 
-## Step 3: Publish Migrations (MySQL Logging Only)
-
-If you plan to use MySQL logging:
-
-```bash
-php artisan vendor:publish --provider="JOOservices\Client\Providers\JooclientServiceProvider" --tag=migrations
-php artisan migrate
-```
-
-## Step 4: Configure Environment
-
-Add to your `.env` file:
+Add to your `.env` file (if using dotenv):
 
 ```env
 # Logging (Main Settings)
 JOOCLIENT_LOGGING_ENABLED=true
-JOOCLIENT_LOGGING_DRIVER=mysql  # mysql, mongodb, monolog, or multi
-
-# MySQL Logging
-JOOCLIENT_DB_LOGGING=true
-JOOCLIENT_DB_HOST=127.0.0.1
-JOOCLIENT_DB_PORT=3306
-JOOCLIENT_DB_DATABASE=jooclient
-JOOCLIENT_DB_USERNAME=root
-JOOCLIENT_DB_PASSWORD=secret
-JOOCLIENT_DB_TABLE=client_request_logs
-
-# MongoDB Logging (Optional)
-JOOCLIENT_MONGODB_LOGGING=true
-JOOCLIENT_MONGODB_DSN=mongodb://127.0.0.1:27017
-JOOCLIENT_MONGODB_DATABASE=jooclient
-JOOCLIENT_MONGODB_COLLECTION=client_request_logs
-
-# Caching (Optional)
-JOOCLIENT_CACHE_ENABLED=true
-JOOCLIENT_CACHE_DRIVER=redis  # redis or filesystem
-JOOCLIENT_CACHE_TTL=3600
-
-# Redis Cache (when driver=redis)
-JOOCLIENT_REDIS_HOST=127.0.0.1
-JOOCLIENT_REDIS_PORT=6379
-JOOCLIENT_REDIS_PASSWORD=
-JOOCLIENT_REDIS_DATABASE=0
+JOOCLIENT_LOGGING_DRIVER=monolog  # monolog is the default
 
 # Retries (Optional)
 JOOCLIENT_RETRIES=true
@@ -74,18 +37,18 @@ JOOCLIENT_RETRIES_DELAY=1
 JOOCLIENT_RETRIES_MIN_ERROR_CODE=500
 ```
 
-## Step 5: Verify Installation
+## Step 3: Verify Installation
 
 Create a simple test:
 
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
 
-$factory = new Factory();
-$result = $factory->make();
-$response = $result->get('https://api.github.com');
+$builder = ClientBuilder::create();
+$client = $builder->build();
+$response = $client->get('https://api.github.com');
 
-echo "Status: " . $response->getStatusCode() . "\n";
+echo "Status: " . $response->status() . "\n";
 ```
 
 If you see a status code (200, 404, etc.), installation is successful!

@@ -20,26 +20,28 @@ JOOCLIENT_RETRIES_MIN_ERROR_CODE=500
 ### Code Configuration
 
 ```php
-use JOOservices\Client\Factory\Factory;
+use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Resilience\RetryConfig;
 
-$factory = (new Factory())
-    ->enableRetries(
-        maxRetries: 3,        // Maximum retry attempts
-        delayInSec: 1,        // Base delay in seconds
-        minErrorCode: 500     // Only retry 5xx errors
-    );
+$client = ClientBuilder::create()
+    ->withRetry(new RetryConfig(
+        maxAttempts: 3,
+        delaySeconds: 1,
+        minErrorCode: 500
+    ))
+    ->build();
 ```
 
 ## Usage
 
 ```php
-$factory = (new Factory())
-    ->enableRetries(3, 2, 500);
+$builder = ClientBuilder::create()
+    ->withRetry(new RetryConfig(3, 2, 500));
 
-$result = $factory->make();
+$client = $builder->build();
 
 // Automatically retries on 500, 502, 503, etc.
-$response = $result->get('https://api.example.com/unstable');
+$response = $client->get('https://api.example.com/unstable');
 ```
 
 ## Retry Behavior
@@ -60,7 +62,7 @@ By default, only retries:
 
 **Does NOT retry:**
 - 4xx client errors (400, 401, 404, etc.)
-- Status codes < `min_error_code`
+- Status codes < `minErrorCode`
 
 ## See Also
 
