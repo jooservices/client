@@ -15,7 +15,8 @@ test('pipeline manages middleware order and execution', function () {
     // Create middleware that tracks execution
     $m1 = new class ($executionOrder, 'm1') implements MiddlewareInterface {
         public function __construct(private array &$log, private string $name)
-        {}
+        {
+        }
         public function __invoke(RequestInterface $request, array $options, Closure $next): ResponseInterface
         {
             $this->log[] = $this->name . '_req';
@@ -27,7 +28,8 @@ test('pipeline manages middleware order and execution', function () {
 
     $m2 = new class ($executionOrder, 'm2') implements MiddlewareInterface {
         public function __construct(private array &$log, private string $name)
-        {}
+        {
+        }
         public function __invoke(RequestInterface $request, array $options, Closure $next): ResponseInterface
         {
             $this->log[] = $this->name . '_req';
@@ -61,7 +63,7 @@ test('pipeline manages middleware order and execution', function () {
     // Wait, let's just inspect the result.
 
     expect($executionOrder)->not->toBeEmpty();
-    // Assuming LIFO or FIFO logic of the pipeline implementation. 
+    // Assuming LIFO or FIFO logic of the pipeline implementation.
     // Usually we want: m1 matches, passes to m2, passes to handler.
 
     // We expect: m1_req, m2_req, handler, m2_res, m1_res (if m1 is outer)

@@ -35,7 +35,7 @@ describe('InterceptorMiddleware', function () {
         $request = new Request('GET', 'https://example.com');
         $response = new Response(200);
 
-        $next = fn($req, $opts) => $response;
+        $next = fn ($req, $opts) => $response;
 
         $result = $middleware($request, [], $next);
 
@@ -45,8 +45,8 @@ describe('InterceptorMiddleware', function () {
     it('chains interceptors', function () {
         $middleware = new InterceptorMiddleware();
 
-        $middleware->onRequest(fn($r) => $r->withHeader('X-1', 'A'));
-        $middleware->onRequest(fn($r) => $r->withHeader('X-2', 'B'));
+        $middleware->onRequest(fn ($r) => $r->withHeader('X-1', 'A'));
+        $middleware->onRequest(fn ($r) => $r->withHeader('X-2', 'B'));
 
         $request = new Request('GET', 'https://example.com');
         $response = new Response(200);

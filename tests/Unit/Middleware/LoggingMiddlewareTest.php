@@ -33,7 +33,7 @@ describe('LoggingMiddleware', function () {
                     isset($context['duration_ms']);
             });
 
-        $next = fn($r, $o) => $response;
+        $next = fn ($r, $o) => $response;
 
         $middleware($request, [], $next);
     });
@@ -53,7 +53,7 @@ describe('LoggingMiddleware', function () {
                 return $level === 'error' && $context['status'] === 500;
             });
 
-        $next = fn($r, $o) => $response;
+        $next = fn ($r, $o) => $response;
 
         $middleware($request, [], $next);
     });
@@ -73,9 +73,9 @@ describe('LoggingMiddleware', function () {
                     isset($context['exception']);
             });
 
-        $next = fn($r, $o) => throw new RuntimeException('Connection failed');
+        $next = fn ($r, $o) => throw new RuntimeException('Connection failed');
 
-        expect(fn() => $middleware($request, [], $next))->toThrow(RuntimeException::class);
+        expect(fn () => $middleware($request, [], $next))->toThrow(RuntimeException::class);
     });
 
     it('logs bodies when enabled', function () {
@@ -103,12 +103,12 @@ describe('LoggingMiddleware', function () {
                 return $message === 'Response Body' && $context['body'] === 'response body';
             });
 
-        $next = fn($r, $o) => $response;
+        $next = fn ($r, $o) => $response;
 
         $middleware($request, [], $next);
 
         // Ensure streams are rewound if possible (checked implicitly if logic runs without crashing)
-        // Check if body is still readable? 
+        // Check if body is still readable?
         expect((string) $request->getBody())->toBe('request body');
     });
 });

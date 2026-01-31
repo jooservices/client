@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use GuzzleHttp\Promise\Promise;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Client\HttpClient;
 use JOOservices\Client\Contracts\TransportAdapterInterface;
 use JOOservices\Client\ValueObjects\ClientConfig;
-use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Psr7\Response;
 
 describe('HttpClient Batch', function () {
     it('executes requests concurrently', function () {

@@ -28,7 +28,7 @@ describe('GuzzleHttpClientAdapter Async', function () {
         $resultPromise = $adapter->sendAsync($request);
 
         // Wait on it and expect exception
-        expect(fn() => $resultPromise->wait())->toThrow(NetworkConnectionException::class);
+        expect(fn () => $resultPromise->wait())->toThrow(NetworkConnectionException::class);
     });
 
     it('wraps timeout exception in promise', function () {
@@ -43,6 +43,6 @@ describe('GuzzleHttpClientAdapter Async', function () {
 
         $resultPromise = $adapter->sendAsync($request);
 
-        expect(fn() => $resultPromise->wait())->toThrow(TimeoutException::class);
+        expect(fn () => $resultPromise->wait())->toThrow(TimeoutException::class);
     });
 });

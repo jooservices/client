@@ -50,10 +50,9 @@ final readonly class GuzzleHttpClientAdapter implements TransportAdapterInterfac
     }
 
     /**
-     * @return never
      * @throws NetworkConnectionException|TimeoutException
      */
-    private function handleConnectException(ConnectException $e): void
+    private function handleConnectException(ConnectException $e): never
     {
         $message = strtolower($e->getMessage());
         if (str_contains($message, 'timeout') || str_contains($message, 'timed out')) {
@@ -62,4 +61,3 @@ final readonly class GuzzleHttpClientAdapter implements TransportAdapterInterfac
         throw new NetworkConnectionException('Network connection failed: ' . $e->getMessage(), 0, $e);
     }
 }
-
