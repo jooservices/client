@@ -26,8 +26,8 @@ class FilesystemCache implements CacheInterface
 
     private function getFilename(string $key): string
     {
-        // Simple hash to avoid invalid chars
-        return $this->directory . DIRECTORY_SEPARATOR . sha1($key) . '.cache';
+        // Use SHA256 for better security
+        return $this->directory . DIRECTORY_SEPARATOR . hash('sha256', $key) . '.cache';
     }
 
     public function get(string $key, mixed $default = null): mixed
@@ -43,15 +43,13 @@ class FilesystemCache implements CacheInterface
             return $default;
         }
 
-        // Suppress warnings from unserializing corrupted data
-        $data = false;
-        set_error_handler(fn() => true);
+        // Decode JSON data
         try {
-            $data = unserialize($content, ['allowed_classes' => true]);
-        } catch (\Throwable $e) {
-            // Unserialize failed
-        } finally {
-            restore_error_handler();
+            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            // JSON decode failed - corrupted cache
+            unlink($filename);
+            return $default;
         }
 
         if (!is_array($data) || !isset($data['expiresAt'], $data['value'])) {
@@ -59,8 +57,17 @@ class FilesystemCache implements CacheInterface
             return $default;
         }
 
-        /** @var DateTimeImmutable|null $expiresAt */
-        $expiresAt = $data['expiresAt'];
+        // Reconstruct DateTimeImmutable from ISO 8601 string
+        $expiresAt = null;
+        if ($data['expiresAt'] !== null) {
+            try {
+                $expiresAt = new DateTimeImmutable($data['expiresAt']);
+            } catch (\Exception $e) {
+                // Invalid date format
+                unlink($filename);
+                return $default;
+            }
+        }
 
         if ($expiresAt !== null && $expiresAt < new DateTimeImmutable()) {
             unlink($filename);
@@ -84,11 +91,16 @@ class FilesystemCache implements CacheInterface
 
         $data = [
             'value' => $value,
-            'expiresAt' => $expiresAt,
+            'expiresAt' => $expiresAt?->format(DateTimeImmutable::ATOM),
         ];
 
         $filename = $this->getFilename($key);
-        return file_put_contents($filename, serialize($data)) !== false;
+        try {
+            $json = json_encode($data, JSON_THROW_ON_ERROR);
+            return file_put_contents($filename, $json) !== false;
+        } catch (\JsonException $e) {
+            return false;
+        }
     }
 
     public function delete(string $key): bool

@@ -14,32 +14,11 @@ use Monolog\Logger;
 use Psr\Http\Message\RequestInterface;
 
 describe('ClientBuilder', function () {
-    // Helper to capture options passed to Guzzle
-    function captureOptions(array &$capturedOptions): HandlerStack
-    {
-        $mock = new MockHandler([new Response(200)]);
-        $stack = HandlerStack::create($mock);
-        $stack->push(function (callable $handler) use (&$capturedOptions) {
-            return function (RequestInterface $request, array $options) use ($handler, &$capturedOptions) {
-                // Merge captured options
-                $capturedOptions = array_merge($capturedOptions, $options);
 
-                // Capture headers from request as they might be consumed from options
-                foreach ($request->getHeaders() as $name => $values) {
-                    // Normalize to single value for test compatibility if needed, 
-                    // or just Capture raw. Tests expect 'Value' string.
-                    $capturedOptions['headers'][$name] = implode(', ', $values);
-                }
-
-                return $handler($request, $options);
-            };
-        });
-        return $stack;
-    }
 
     it('creates client with default settings', function () {
         $captured = [];
-        $stack = captureOptions($captured);
+        $stack = captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withOption('handler', $stack)
@@ -58,7 +37,7 @@ describe('ClientBuilder', function () {
         // Guzzle Adapter merges it.
 
         $captured = [];
-        $stack = captureOptions($captured);
+        $stack = captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withBaseUri('https://api.example.com')
@@ -72,7 +51,7 @@ describe('ClientBuilder', function () {
 
     it('sets timeout', function () {
         $captured = [];
-        $stack = captureOptions($captured);
+        $stack = captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withTimeout(60)
@@ -86,7 +65,7 @@ describe('ClientBuilder', function () {
 
     it('sets connect timeout', function () {
         $captured = [];
-        $stack = captureOptions($captured);
+        $stack = captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withConnectTimeout(5)
@@ -100,7 +79,7 @@ describe('ClientBuilder', function () {
 
     it('sets headers', function () {
         $captured = [];
-        $stack = captureOptions($captured);
+        $stack = captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withHeader('X-Test', 'Value')
@@ -117,7 +96,7 @@ describe('ClientBuilder', function () {
 
     it('sets verify ssl', function () {
         $captured = [];
-        $stack = captureOptions($captured);
+        $stack = captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withVerifySsl(false)
@@ -131,7 +110,7 @@ describe('ClientBuilder', function () {
 
     it('sets http errors', function () {
         $captured = [];
-        $stack = captureOptions($captured);
+        $stack = captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withHttpErrors(false) // Default is often true in Guzzle
@@ -182,7 +161,7 @@ describe('ClientBuilder', function () {
         // We verify cache option is passed or middleware is active.
         // CacheMiddleware uses 'cache_ttl' option.
         $captured = [];
-        $stack = captureOptions($captured);
+        $stack = captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withCache(new MemoryCache(), 1800)

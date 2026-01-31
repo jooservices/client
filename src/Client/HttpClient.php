@@ -6,7 +6,6 @@ namespace JOOservices\Client\Client;
 
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Utils;
 use JOOservices\Client\Contracts\AsyncHttpClientInterface;
 use JOOservices\Client\Contracts\HttpClientInterface;
 use JOOservices\Client\Contracts\ResponseWrapperInterface;
@@ -84,6 +83,9 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
             });
     }
 
+    /**
+     * @param iterable<array-key, PromiseInterface|RequestInterface|callable(): PromiseInterface> $requests
+     */
     public function batch(iterable $requests, int $concurrency = 25): array
     {
         $results = [];
@@ -107,17 +109,15 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
                     $promise = $r();
                 }
 
-                if ($promise) {
-                    // Wrap to preserve key and handle success/failure
-                    yield $key => $promise->then(
-                        function ($value) use ($key) {
-                            return ['key' => $key, 'value' => $value, 'state' => 'fulfilled'];
-                        },
-                        function ($reason) use ($key) {
-                            return ['key' => $key, 'value' => $reason, 'state' => 'rejected'];
-                        }
-                    );
-                }
+                // Wrap to preserve key and handle success/failure
+                yield $key => $promise->then(
+                    function ($value) use ($key) {
+                        return ['key' => $key, 'value' => $value, 'state' => 'fulfilled'];
+                    },
+                    function ($reason) use ($key) {
+                        return ['key' => $key, 'value' => $reason, 'state' => 'rejected'];
+                    }
+                );
             }
         };
 
@@ -129,7 +129,7 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
                     $results[$wrapped['key']] = $wrapped['value'];
                 }
             },
-            function ($reason, $idx) use (&$results) {
+            function ($reason, $idx) {
                 // Should not happen as we catch rejections in the wrapper.
             }
         );

@@ -6,7 +6,9 @@ namespace JOOservices\Client\Exceptions;
 
 use InvalidArgumentException;
 
+/**
+ * Thrown when configuration is invalid.
+ */
 final class InvalidConfigurationException extends InvalidArgumentException
 {
-    //
 }
