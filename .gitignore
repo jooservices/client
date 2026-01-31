@@ -13,3 +13,4 @@ docs/archive/
 coverage/
 logs/
 debug_monolog.php
+.phpcs-cache
