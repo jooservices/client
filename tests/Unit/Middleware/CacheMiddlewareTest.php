@@ -26,7 +26,7 @@ describe('CacheMiddleware', function () {
                 $value['headers']['X-Foo'][0] === 'Bar';
         });
 
-        $next = fn($r, $o) => $response;
+        $next = fn ($r, $o) => $response;
 
         $result = $middleware($request, [], $next);
 
@@ -49,7 +49,7 @@ describe('CacheMiddleware', function () {
         $cache->shouldReceive('get')->once()->andReturn($cachedValue);
 
         // Next should NOT be called
-        $next = fn($r, $o) => throw new Exception('Should not be called');
+        $next = fn ($r, $o) => throw new Exception('Should not be called');
 
         $result = $middleware($request, [], $next);
 
@@ -68,7 +68,7 @@ describe('CacheMiddleware', function () {
         $cache->shouldNotReceive('get');
         $cache->shouldNotReceive('set');
 
-        $next = fn($r, $o) => $response;
+        $next = fn ($r, $o) => $response;
 
         $middleware($request, [], $next);
     });
@@ -84,9 +84,11 @@ describe('CacheMiddleware', function () {
         // Expect exact TTL 60
         $cache->shouldReceive('set')->with(Mockery::any(), Mockery::any(), 60);
 
-        $next = fn($r, $o) => $response;
+        $next = fn ($r, $o) => $response;
 
-        $middleware($request, ['cache_ttl' => 60], $next);
+        $result = $middleware($request, ['cache_ttl' => 60], $next);
+
+        expect($result->getStatusCode())->toBe(200);
     });
 
     it('handles cache serialization failure (partial)', function () {
@@ -101,7 +103,7 @@ describe('CacheMiddleware', function () {
 
         // It should proceed to next safely if code says `is_array`
         $response = new Response(200);
-        $next = fn($r, $o) => $response;
+        $next = fn ($r, $o) => $response;
 
         // Expect set because it was a "miss" effectively
         $cache->shouldReceive('set');
