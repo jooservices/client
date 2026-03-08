@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-01-31
+## [1.0.0] - 2026-03-08
 
 ### Added
 - **Core**: Implementation of `HttpClient` with strict type safety using `ClientConfig`.
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `CacheMiddleware`: PSR-16 integration with `MemoryCache` and `FilesystemCache`.
     - `LoggingMiddleware`: PSR-3 integration with flexible log levels and body logging.
     - `UserAgentMiddleware` & `CorrelationIdMiddleware`.
+- **Logging**: MongoDB logger with payload trimming/redaction and optional custom writer.
 - **Adapters**: `GuzzleHttpClientAdapter` separating transport logic from core business rules.
 - **Resilience**: Configurable `RetryConfig` and `CircuitBreakerConfig` value objects.
 - **Tests**: Comprehensive Test Suite (100% Core coverage) including Unit, Feature/Integration, and Benchmark tests (0.01ms overhead).
@@ -37,10 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optimized `HttpClient::batch` to properly handle various input types (`RequestInterface` objects, Callables, Promises)
 - Improved exception handling in `FilesystemCache` with proper JSON error handling
 - Updated `StateStoreInterface` to remove unused method signatures
+- **Documentation**: Reorganized docs tree and refreshed user-facing entry points.
 
 ### Tests
 - Added 14 comprehensive unit tests for `OptionsMerger` (100% coverage)
 - Added 5 async method tests for POST/PUT/PATCH/DELETE operations
 - Added 8 middleware ordering integration tests
 - Updated `InMemoryStateStore` tests to use public interface instead of internal state
+- Added unit and integration coverage for MongoDB logging
 - All 142 tests passing (100% success rate)

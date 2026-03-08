@@ -2,7 +2,7 @@
     "name": "jooservices/client",
     "description": "A robust, layered HTTP Client wrapper for JOOservices",
     "type": "library",
-    "version": "0.5.0",
+    "version": "1.0.0",
     "license": "MIT",
     "authors": [
         {
@@ -14,6 +14,7 @@
         "php": "^8.5",
         "guzzlehttp/guzzle": "^7.9",
         "jooservices/dto": "^1.0",
+        "mongodb/laravel-mongodb": "^5.6",
         "monolog/monolog": "^3.10",
         "psr/log": "^3.0",
         "psr/simple-cache": "^3.0",
