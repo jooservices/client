@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace JOOservices\Client\Middleware;
 
-use Closure;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Promise\RejectedPromise;
 use JOOservices\Client\Contracts\MiddlewareInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use RuntimeException;
 
 class MiddlewarePipeline
 {
@@ -78,17 +78,8 @@ class MiddlewarePipeline
     {
         $stack = $stack ?? HandlerStack::create();
 
-        // We iterate our order.
-        // Guzzle Stack: push() adds to the top (executed first).
-        // Our Pipeline: We usually want FIFO (First added = Outer most).
-        // But traditionally in Middleware:
-        // OUT -> Middleware 1 -> Middleware 2 -> Core -> Middleware 2 -> Middleware 1 -> OUT
-        //
-        // If we want $this->order[0] to be outer-most:
-        // We need to push them onto the Guzzle stack ensuring $order[0] ends up on top.
-        // Guzzle push() puts it on top.
-        // So we should iterate $order in REVERSE.
-
+        // Iterate in reverse order so first-added middleware becomes outermost
+        // (Guzzle's push() adds to top of stack)
         foreach (array_reverse($this->order) as $name) {
             if (!isset($this->middlewares[$name])) {
                 continue;
@@ -99,63 +90,25 @@ class MiddlewarePipeline
             // Convert our MiddlewareInterface to Guzzle Middleware
             $guzzleMiddleware = function (callable $handler) use ($middleware) {
                 return function (RequestInterface $request, array $options) use ($handler, $middleware) {
-                    // $handler is the 'next' closure in our world, but Guzzle expects promises.
-                    // Wait, we designed our interface for synchronous ResponseInterface?
-                    // "ResponseInterface".
-                    // Guzzle 7 is Promise based.
-                    // If we force synchronous return in our middleware, we break Guzzle async.
-                    //
-                    // Correction: Our Interface said "return ResponseInterface".
-                    // If we want to support Guzzle async, we must return PromiseInterface|ResponseInterface.
-                    // OR we force synchronous behavior (Block inside).
-                    //
-                    // Phase 1 Architecture Decision was "Hide Guzzle".
-                    // But if we use Guzzle Adapter, we are bound to its async nature internally even if we expose sync.
-                    //
-                    // If we wrap Guzzle middleware:
-                    // $next($request, $options) returns a Promise.
-                    //
-                    // Our MiddlewareInterface signature:
-                    // __invoke(Request, Options, Next): ResponseInterface
-                    //
-                    // If we want compatible logic:
-                    // We must resolve the promise from $next() inside our wrapper IF our user middleware
-                    // expects strict ResponseInterface.
-                    // But blocking breaks async pipeline if we ever expose it.
-                    //
-                    // Let's assume for Phase 2 we are OK blocking because our Public API `HttpClient`
-                    // returns `ResponseWrapper` which wraps a `ResponseInterface` (already resolved).
-                    // `GuzzleHttpClientAdapter::send()` calls `$client->send()` which is synchronous (blocks).
-                    // So inside the stack, we are running in a blocking context mostly.
-                    //
-                    // ADAPTER implementation:
-                    // $guzzleMiddleware function:
-
-                    // $nextClosure = function (RequestInterface $req, array $opts) use ($handler): ResponseInterface {
-                    //     $promise = $handler($req, $opts);
-
-                    //     if ($promise instanceof \GuzzleHttp\Promise\PromiseInterface) {
-                    //         /** @var ResponseInterface */
-                    //         return $promise->wait();
-                    //     }
-
-                    //     /** @var ResponseInterface */
-                    //     return $promise;
-                    // };
-
+                    // Wrap handler to resolve promises (supports both sync and async)
                     $nextClosure = function (RequestInterface $req, array $opts) use ($handler): ResponseInterface {
-                        /** @var \GuzzleHttp\Promise\PromiseInterface|ResponseInterface $result */
                         $result = $handler($req, $opts);
 
                         if ($result instanceof \GuzzleHttp\Promise\PromiseInterface) {
-                            /** @var ResponseInterface */
-                            return $result->wait();
+                            $resolved = $result->wait();
+                            if ($resolved instanceof ResponseInterface) {
+                                return $resolved;
+                            }
+
+                            throw new RuntimeException('Middleware handler resolved to a non-response value.');
                         }
 
-                        return $result;
+                        if ($result instanceof ResponseInterface) {
+                            return $result;
+                        }
+
+                        throw new RuntimeException('Middleware handler returned an invalid response type.');
                     };
-
-
 
                     try {
                         $response = $middleware($request, $options, $nextClosure);

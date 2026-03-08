@@ -181,51 +181,15 @@ final class ClientBuilder
 
     public function withRetry(RetryConfig $config): self
     {
-        // Retry should be INNER (late), but BEFORE Cache?
-        // Actually: Cache -> Retry -> Network.
-        // If Cache Hit, return.
-        // If Cache Miss, try Network. If Network fails, Retry.
-        // So Retry wraps Network. Cache wraps Retry.
-        // Pipeline stack: [Outer] ... Cache -> Retry -> Adapter [Inner]
-        // My pipeline pushes to END.
-        // Current stack order if I call:
-        // withCache -> puts Cache at end.
-        // withRetry -> puts Retry at end (after Cache).
-        // This is WRONG! We want Cache to check first.
-
-        // Wait, Middleware stack execution is LIFO or FIFO?
-        // Guzzle HandlerStack: Pushed middlewares are executed...
-        // My MiddlewarePipeline:
-        // $pipeline->push($m) -> adds to array.
-        // Execution: foreach ($middlewares as $middleware) { $handler = $middleware(..., $handler) }
-        // The last added wraps the previous handler.
-        // So:
-        // 1. Adapter (base)
-        // 2. add(Retry) -> Retry(Adapter)
-        // 3. add(Cache) -> Cache(Retry(Adapter))
-        // So I must add Retry FIRST, then Cache.
-        // BUT user calls Builder methods in any order.
-
-        // To support arbitrary order, Builder should simply add "withMiddleware" and let user/guide decide?
-        // OR Builder imposes order?
-        // "Phase 4 spec: Order in pipeline: RateLimiter -> CircuitBreaker -> Cache -> Retry -> Logging"
-        // This implies specific slots.
-        // My `withMiddleware` takes a name.
-        // `MiddlewarePipeline` currently just pushes to end.
-        // If I want fixed order, I need to change Pipeline to support 'before/after' or priority.
-        // For Phase 4, simpler approach: Document order OR rely on user calling order.
-        // Let's rely on user calling order for now, OR implementation plan said "Ensure order...".
-
-        // Let's just add them.
+        // Note: Middleware order matters. The last added wraps previous ones.
+        // Typical order: Cache (outer) -> Retry (inner) -> Network
+        // Call withRetry() before withCache() for proper behavior.
         return $this->withMiddleware(new RetryMiddleware($config), 'retry');
     }
 
     public function withCircuitBreaker(CircuitBreakerConfig $config, ?StateStoreInterface $store = null): self
     {
-        // CircuitBreaker wraps Cache?
-        // Spec: CB -> Cache.
-        // So CB(Cache(Retry(Net))).
-        // So add Retry, then Cache, then CB.
+        // Circuit breaker wraps other middleware. Recommended order: CB -> Cache -> Retry -> Network
         $store = $store ?? new InMemoryStateStore();
         return $this->withMiddleware(new CircuitBreakerMiddleware($config, $store), 'circuit_breaker');
     }
