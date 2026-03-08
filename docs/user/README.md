@@ -1,53 +1,105 @@
 # User Documentation
 
-Complete guides for using JOOClient in your Laravel applications.
+Complete guide for using JOOClient v1.0.0.
+
+> **Note**: Version 1.0.0 is a complete rewrite. If you're looking for documentation for earlier versions, please refer to legacy documentation.
 
 ## 📚 Contents
 
-### 🚀 [Getting Started](getting-started/)
-Start here if you're new to JOOClient:
-- **[Installation](getting-started/installation.md)** - Install and configure JOOClient
-- **[Configuration](getting-started/configuration.md)** - Basic configuration
-- **[First Request](getting-started/first-request.md)** - Make your first API call
+### 📖 [Examples](examples/)
+Working code examples you can run immediately:
+- **[01-basic-get.php](examples/01-basic-get.php)** - Simple GET request
+- **[02-post-with-json.php](examples/02-post-with-json.php)** - POST request with JSON
+- **[03-async-requests.php](examples/03-async-requests.php)** - Concurrent async requests
+- **[04-error-handling.php](examples/04-error-handling.php)** - Error handling patterns
+- **[05-middleware-logging.php](examples/05-middleware-logging.php)** - Monolog logging setup
 
-### 📖 [Guides](guides/)
-Feature-specific tutorials with complete examples:
+### 📚 [API Reference](reference/)
+- **[Class Reference](reference/classes.md)** - Complete API documentation for all classes
 
-#### Core Features
-- **[Basic Usage](guides/core/basic-usage.md)** - Basic HTTP requests
-- **[Error Handling](guides/core/error-handling.md)** - Error handling patterns
-- **[Request Chaining](guides/core/request-chaining.md)** - Sequential requests with conditionals
-- **[Async Requests](guides/core/async-requests.md)** - Asynchronous operations
+## 🚀 Quick Start
 
-#### Logging
-- **[MySQL Logging](guides/logging/mysql-logging.md)** - Log to MySQL database
-- **[MongoDB Logging](guides/logging/mongodb-logging.md)** - Log to MongoDB
-- **[Monolog Logging](guides/logging/monolog-logging.md)** - File-based logging
-- **[Multi-Logger](guides/logging/multi-logger.md)** - Log to multiple destinations
+### Installation
 
-#### Caching
-- **[Redis Cache](guides/caching/redis-cache.md)** - Redis caching
-- **[Filesystem Cache](guides/caching/filesystem-cache.md)** - Filesystem caching
+```bash
+composer require jooservices/client
+```
 
-#### Resilience
-- **[Retries](guides/resilience/retries.md)** - Automatic retry logic
-- **[Rate Limiting](guides/resilience/rate-limiting.md)** - Prevent 429 errors
-- **[Circuit Breaker](guides/resilience/circuit-breaker.md)** - Circuit breaker pattern
-- **[Health Checks](guides/resilience/health-checks.md)** - Service availability monitoring
+### Basic Usage
 
-#### Advanced Features
-- **[Request Signing](guides/advanced/request-signing.md)** - Sign requests for authenticated APIs
-- **[Request Queuing](guides/advanced/request-queuing.md)** - Queue and batch process requests
-- **[Request Deduplication](guides/advanced/request-deduplication.md)** - Prevent duplicate requests
-- **[Request Replay](guides/advanced/request-replay.md)** - Replay recorded requests
-- **[Templates](guides/advanced/templates.md)** - Request templates for reusability
-- **[Interceptors](guides/advanced/interceptors.md)** - Request/response interceptors
-- **[Response Validation](guides/advanced/response-validation.md)** - Validate API responses
-- **[Tracing](guides/advanced/tracing.md)** - Distributed tracing
-- **[Correlation IDs](guides/advanced/correlation-ids.md)** - Correlation IDs for tracing
-- **[Compression](guides/advanced/compression.md)** - Request/response compression
-- **[Cookie Jar](guides/advanced/cookie-jar.md)** - Manage cookies across requests
-- **[Progress Tracking](guides/advanced/progress-tracking.md)** - Track upload/download progress
+```php
+use JOOservices\Client\Client\ClientBuilder;
+
+$client = ClientBuilder::create()
+    ->withBaseUri('https://api.example.com')
+    ->withTimeout(5)
+    ->build();
+
+$response = $client->get('/users/1');
+echo $response->json()['name'];
+```
+
+### With Resilience
+
+```php
+use JOOservices\Client\Resilience\RetryConfig;
+use JOOservices\Client\Resilience\CircuitBreakerConfig;
+
+$client = ClientBuilder::create()
+    ->withRetry(new RetryConfig(maxAttempts: 3, baseDelayMs: 100))
+    ->withCircuitBreaker(new CircuitBreakerConfig(failureThreshold: 5))
+    ->build();
+```
+
+### With Caching
+
+```php
+use JOOservices\Client\Cache\MemoryCache;
+use JOOservices\Client\Cache\FilesystemCache;
+
+// In-memory cache
+$client = ClientBuilder::create()
+    ->withCache(new MemoryCache(), defaultTtl: 3600)
+    ->build();
+
+// Filesystem cache
+$cache = new FilesystemCache(__DIR__ . '/cache');
+$client = ClientBuilder::create()
+    ->withCache($cache, defaultTtl: 3600)
+    ->build();
+```
+
+### With Logging
+
+```php
+// Simple Monolog logging
+$client = ClientBuilder::create()
+    ->withDefaultLogging('my-app', __DIR__ . '/logs')
+    ->build();
+
+// Custom logger
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+
+$logger = new Logger('api');
+$logger->pushHandler(new StreamHandler('php://stdout'));
+
+$client = ClientBuilder::create()
+    ->withLogger($logger, logBodies: true)
+    ->build();
+```
+
+## 🔗 See Also
+
+- **[Main README](../../README.md)** - Project overview
+- **[CHANGELOG](../../CHANGELOG.md)** - Version history
+- **[CONTRIBUTING](../../CONTRIBUTING.md)** - Contributing guidelines
+
+---
+
+**Copyright (c) 2026 Viet Vu <jooservices@gmail.com>**  
+**Company: JOOservices Ltd**  
+Licensed under the MIT License.
 
 #### Integration
 - **[Laravel Integration](guides/integration/laravel-integration.md)** - Laravel-specific integration
