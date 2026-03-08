@@ -68,3 +68,27 @@ function captureGuzzleOptions(array &$capturedOptions): HandlerStack
     });
     return $stack;
 }
+
+/**
+ * Check MongoDB availability for integration tests.
+ */
+function mongoAvailabilityError(): ?string
+{
+    if (!class_exists(MongoDB\Client::class)) {
+        return 'mongodb/mongodb client class not available.';
+    }
+
+    $uri = getenv('JOOCLIENT_MONGO_URI');
+    if (!is_string($uri) || $uri === '') {
+        $uri = 'mongodb://127.0.0.1:27017/?serverSelectionTimeoutMS=1200';
+    }
+
+    try {
+        $client = new MongoDB\Client($uri);
+        $client->selectDatabase('admin')->command(['ping' => 1]);
+    } catch (Throwable $e) {
+        return 'MongoDB is not reachable on host: ' . $e->getMessage();
+    }
+
+    return null;
+}
