@@ -146,4 +146,38 @@ class CircuitBreakerMiddlewareTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
     }
+
+    public function test_half_open_recovery_resets_circuit_after_success_threshold(): void
+    {
+        $config = new CircuitBreakerConfig(
+            failureThreshold: 2,
+            recoveryTimeoutMs: 50,
+            successThreshold: 2
+        );
+        $store = new InMemoryStateStore();
+        $middleware = new CircuitBreakerMiddleware($config, $store);
+        $request = new Request('GET', 'https://example.com/api');
+
+        try {
+            $middleware($request, [], fn ($req, $opts) => throw new \RuntimeException('fail'));
+        } catch (\Throwable) {
+        }
+        try {
+            $middleware($request, [], fn ($req, $opts) => throw new \RuntimeException('fail'));
+        } catch (\Throwable) {
+        }
+        try {
+            $middleware($request, [], fn ($req, $opts) => throw new \RuntimeException('open'));
+        } catch (NetworkConnectionException $e) {
+            $this->assertSame('Circuit Breaker is OPEN', $e->getMessage());
+        }
+
+        usleep(100 * 1000);
+
+        $middleware($request, [], fn ($req, $opts) => new Response(200));
+        $response = $middleware($request, [], fn ($req, $opts) => new Response(200));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertFalse($store->isCircuitOpen(2, 50));
+    }
 }

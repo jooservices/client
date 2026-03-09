@@ -33,15 +33,18 @@ class CacheMiddleware implements MiddlewareInterface
 
         // Try Cache
         $cachedValue = $this->cache->get($cacheKey);
-        if ($cachedValue !== null && is_array($cachedValue)) {
+        $hasCacheShape = $cachedValue !== null
+            && is_array($cachedValue)
+            && isset($cachedValue['status'], $cachedValue['headers'], $cachedValue['body']);
+        if ($hasCacheShape) {
             // Reconstruct Response (Simplified: body, status, headers)
             // Note: PSR-7 streams cannot be easily serialized.
             // We assume cached value is [status, headers, bodyString]
-            return new Response(
-                $cachedValue['status'],
-                $cachedValue['headers'],
-                $cachedValue['body']
-            );
+            $status = is_int($cachedValue['status']) ? $cachedValue['status'] : 200;
+            /** @var array<array<string>|string> $headers */
+            $headers = is_array($cachedValue['headers']) ? $cachedValue['headers'] : [];
+            $body = is_string($cachedValue['body']) ? $cachedValue['body'] : '';
+            return new Response($status, $headers, $body);
         }
 
         /** @var ResponseInterface $response */

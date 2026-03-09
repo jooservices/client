@@ -101,16 +101,18 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
 
         $internalOnStats = static function (TransferStats $stats) use ($statsBag): void {
             $handlerStats = $stats->getHandlerStats();
-            if (is_array($handlerStats)) {
-                $primaryIp = $handlerStats['primary_ip'] ?? null;
-                $localIp = $handlerStats['local_ip'] ?? null;
-
-                $statsBag->targetIp = is_string($primaryIp) && $primaryIp !== '' ? $primaryIp : null;
-                $statsBag->localIp = is_string($localIp) && $localIp !== '' ? $localIp : null;
+            /** @phpstan-ignore function.alreadyNarrowedType (runtime may return non-array in some environments) */
+            if (!is_array($handlerStats)) {
+                return;
             }
+            $primaryIp = $handlerStats['primary_ip'] ?? null;
+            $localIp = $handlerStats['local_ip'] ?? null;
+
+            $statsBag->targetIp = is_string($primaryIp) && $primaryIp !== '' ? $primaryIp : null;
+            $statsBag->localIp = is_string($localIp) && $localIp !== '' ? $localIp : null;
 
             $effectiveUri = $stats->getEffectiveUri();
-            /** @phpstan-ignore ternary.elseUnreachable (getEffectiveUri() can return null at runtime per PSR-7) */
+            /** @phpstan-ignore notIdentical.alwaysTrue (PSR-7 allows null at runtime) */
             $statsBag->effectiveUri = $effectiveUri !== null ? (string) $effectiveUri : null;
         };
 

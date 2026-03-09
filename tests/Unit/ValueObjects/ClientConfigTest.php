@@ -43,6 +43,13 @@ class ClientConfigTest extends TestCase
         new ClientConfig(timeout: -1);
     }
 
+    public function test_it_throws_on_negative_connect_timeout(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('Connect timeout cannot be negative');
+        new ClientConfig(connectTimeout: -1);
+    }
+
     public function test_create_from_array_with_options_resolver(): void
     {
         $config = ClientConfig::fromArray([

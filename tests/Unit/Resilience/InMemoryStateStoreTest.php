@@ -119,4 +119,17 @@ class InMemoryStateStoreTest extends TestCase
         $store->recordFailure();
         $this->assertFalse($store->checkHalfOpenRecovery(1));
     }
+
+    public function test_record_failure_reopens_circuit_when_in_half_open(): void
+    {
+        $store = new InMemoryStateStore();
+        $store->recordFailure();
+        $this->assertTrue($store->isCircuitOpen(1, 100));
+
+        usleep(150 * 1000);
+        $this->assertTrue($store->isHalfOpen(100));
+
+        $store->recordFailure();
+        $this->assertTrue($store->isCircuitOpen(1, 100));
+    }
 }

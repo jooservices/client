@@ -88,4 +88,18 @@ class CorrelationIdMiddlewareTest extends TestCase
 
         $this->assertSame($responseId, $response->getHeaderLine('X-Correlation-ID'));
     }
+
+    public function test_falls_back_to_default_header_when_correlation_header_option_is_not_string(): void
+    {
+        $middleware = new CorrelationIdMiddleware();
+        $request = new Request('GET', 'https://example.com/api');
+
+        $next = function ($req, $opts) {
+            $this->assertTrue($req->hasHeader('X-Correlation-ID'));
+            return new Response(200);
+        };
+
+        $middleware($request, ['correlation_header' => ['invalid']], $next);
+        $this->addToAssertionCount(1);
+    }
 }

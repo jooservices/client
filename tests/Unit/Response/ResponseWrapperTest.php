@@ -98,4 +98,16 @@ class ResponseWrapperTest extends TestCase
         $this->expectExceptionMessage('not an array');
         $wrapper->json();
     }
+
+    public function test_toDto_returns_dto_from_json(): void
+    {
+        $psr = new Response(200, [], json_encode(['id' => 1, 'name' => 'Test']));
+        $wrapper = new ResponseWrapper($psr);
+
+        $dto = $wrapper->toDto(ResponseWrapperTestDto::class);
+
+        $this->assertInstanceOf(ResponseWrapperTestDto::class, $dto);
+        $this->assertSame(1, $dto->id);
+        $this->assertSame('Test', $dto->name);
+    }
 }

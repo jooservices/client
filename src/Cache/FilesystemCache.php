@@ -59,11 +59,12 @@ class FilesystemCache implements CacheInterface
 
         // Reconstruct DateTimeImmutable from ISO 8601 string
         $expiresAt = null;
-        if ($data['expiresAt'] !== null) {
+        $expiresAtRaw = $data['expiresAt'];
+        /** @phpstan-ignore notIdentical.alwaysTrue (isset guarantees key exists; value can be null at runtime) */
+        if ($expiresAtRaw !== null && $expiresAtRaw !== '') {
             try {
-                $expiresAt = new DateTimeImmutable($data['expiresAt']);
+                $expiresAt = new DateTimeImmutable((string) $expiresAtRaw);
             } catch (\Exception $e) {
-                // Invalid date format
                 unlink($filename);
                 return $default;
             }

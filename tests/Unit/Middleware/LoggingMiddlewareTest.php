@@ -6,6 +6,7 @@ namespace Tests\Unit\Middleware;
 
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\Uri;
 use JOOservices\Client\Client\HttpClient;
 use JOOservices\Client\Contracts\WanIpProviderInterface;
 use JOOservices\Client\Middleware\LoggingMiddleware;
@@ -165,5 +166,94 @@ class LoggingMiddlewareTest extends TestCase
 
         $middleware($request, $options, $next);
         $this->addToAssertionCount(1);
+    }
+
+    public function test_resolves_target_hostname_from_base_uri_when_request_uri_is_relative(): void
+    {
+        $logger = Mockery::mock(LoggerInterface::class);
+        $middleware = new LoggingMiddleware($logger);
+
+        $request = new Request('GET', '/api/path');
+        $response = new Response(200);
+        $options = ['base_uri' => 'https://api.example.com'];
+
+        $logger->shouldReceive('info')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return $context['target_hostname'] === 'api.example.com';
+            });
+        $logger->shouldReceive('log')->once();
+
+        $next = fn ($r, $o) => $response;
+        $middleware($request, $options, $next);
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_resolves_target_hostname_from_base_uri_uri_interface(): void
+    {
+        $logger = Mockery::mock(LoggerInterface::class);
+        $middleware = new LoggingMiddleware($logger);
+
+        $request = new Request('GET', '/path');
+        $response = new Response(200);
+        $options = ['base_uri' => new Uri('https://service.example.com')];
+
+        $logger->shouldReceive('info')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return $context['target_hostname'] === 'service.example.com';
+            });
+        $logger->shouldReceive('log')->once();
+
+        $next = fn ($r, $o) => $response;
+        $middleware($request, $options, $next);
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_resolves_target_hostname_from_effective_uri_on_response_when_request_uri_relative(): void
+    {
+        $logger = Mockery::mock(LoggerInterface::class);
+        $middleware = new LoggingMiddleware($logger);
+
+        $request = new Request('GET', '/relative');
+        $response = new Response(200);
+        $statsBag = new TransferStatsBag();
+        $statsBag->effectiveUri = 'https://resolved.example.com/relative';
+        $statsBag->targetIp = '93.184.0.1';
+        $options = [HttpClient::TRANSFER_STATS_OPTION_KEY => $statsBag];
+
+        $logger->shouldReceive('info')->once();
+        $logger->shouldReceive('log')
+            ->once()
+            ->withArgs(function ($level, $message, $context) {
+                return $context['target_hostname'] === 'resolved.example.com'
+                    && $context['target_ip'] === '93.184.0.1';
+            });
+
+        $next = fn ($r, $o) => $response;
+        $middleware($request, $options, $next);
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_resolves_target_hostname_from_effective_uri_on_exception(): void
+    {
+        $logger = Mockery::mock(LoggerInterface::class);
+        $middleware = new LoggingMiddleware($logger);
+
+        $request = new Request('GET', '/path');
+        $statsBag = new TransferStatsBag();
+        $statsBag->effectiveUri = 'https://failed.example.com/path';
+        $options = [HttpClient::TRANSFER_STATS_OPTION_KEY => $statsBag];
+
+        $logger->shouldReceive('info')->once();
+        $logger->shouldReceive('error')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return $context['target_hostname'] === 'failed.example.com';
+            });
+
+        $next = fn ($r, $o) => throw new \RuntimeException('Connection refused');
+        $this->expectException(\RuntimeException::class);
+        $middleware($request, $options, $next);
     }
 }
