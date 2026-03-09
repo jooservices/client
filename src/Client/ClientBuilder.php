@@ -10,6 +10,7 @@ use JOOservices\Client\Adapters\Guzzle\GuzzleHttpClientAdapter;
 use JOOservices\Client\Contracts\HttpClientInterface;
 use JOOservices\Client\Contracts\MiddlewareInterface;
 use JOOservices\Client\Contracts\TransportAdapterInterface;
+use JOOservices\Client\Contracts\WanIpProviderInterface;
 use JOOservices\Client\Logging\MonologFactory;
 use JOOservices\Client\Middleware\CacheMiddleware;
 use JOOservices\Client\Middleware\CircuitBreakerMiddleware;
@@ -23,6 +24,7 @@ use JOOservices\Client\Resilience\CircuitBreakerConfig;
 use JOOservices\Client\Resilience\Contracts\StateStoreInterface;
 use JOOservices\Client\Resilience\RetryConfig;
 use JOOservices\Client\Resilience\Storage\InMemoryStateStore;
+use JOOservices\Client\Support\CachedExternalWanIpProvider;
 use JOOservices\Client\ValueObjects\ClientConfig;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -49,7 +51,9 @@ final class ClientBuilder
 
     private ?MiddlewarePipeline $pipeline = null;
 
-    private ?InterceptorMiddleware $interceptorMiddleware = null;
+    private ?InterceptorMiddleware $interceptor = null;
+
+    private ?WanIpProviderInterface $wanIpProvider = null;
 
     public static function create(): self
     {
@@ -158,14 +162,22 @@ final class ClientBuilder
         return $this;
     }
 
-    public function withLogger(LoggerInterface $logger, bool $logBodies = false): self
-    {
+    public function withLogger(
+        LoggerInterface $logger,
+        bool $logBodies = false
+    ): self {
+        $provider = $this->wanIpProvider;
+        if ($provider === null) {
+            $provider = new CachedExternalWanIpProvider();
+        }
+        $this->wanIpProvider = $provider;
+
         // Add LoggingMiddleware. Usually should be OUTER (early in stack) to capture everything?
         // OR Inner (late) to capture network time?
         // Phase 3 specs: "Measure duration; log success...".
         // If we put it outer, we measure total middleware time too.
         // Let's put it as 'logging'.
-        return $this->withMiddleware(new LoggingMiddleware($logger, $logBodies), 'logging');
+        return $this->withMiddleware(new LoggingMiddleware($logger, $logBodies, $provider), 'logging');
     }
 
     public function withDefaultLogging(string $domain, ?string $path = null): self
@@ -204,11 +216,12 @@ final class ClientBuilder
 
     private function getInterceptorMiddleware(): InterceptorMiddleware
     {
-        if ($this->interceptorMiddleware === null) {
-            $this->interceptorMiddleware = new InterceptorMiddleware();
-            $this->getPipeline()->push($this->interceptorMiddleware, 'interceptor');
+        if ($this->interceptor === null) {
+            $this->interceptor = new InterceptorMiddleware();
+            $this->getPipeline()->push($this->interceptor, 'interceptor');
         }
-        return $this->interceptorMiddleware;
+
+        return $this->interceptor;
     }
 
     public function build(): HttpClientInterface

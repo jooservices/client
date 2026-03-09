@@ -2,14 +2,21 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Middleware;
+
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Exceptions\NetworkConnectionException;
 use JOOservices\Client\Middleware\RetryMiddleware;
 use JOOservices\Client\Resilience\RetryConfig;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-describe('RetryMiddleware', function () {
-    it('passes through on success', function () {
+#[Group('unit')]
+class RetryMiddlewareTest extends TestCase
+{
+    public function test_passes_through_on_success(): void
+    {
         $config = new RetryConfig(maxAttempts: 3, baseDelayMs: 10, maxDelayMs: 100, useJitter: false);
         $middleware = new RetryMiddleware($config);
         $request = new Request('GET', 'https://example.com/api');
@@ -22,11 +29,12 @@ describe('RetryMiddleware', function () {
 
         $response = $middleware($request, [], $next);
 
-        expect($callCount)->toBe(1);
-        expect($response->getStatusCode())->toBe(200);
-    });
+        $this->assertSame(1, $callCount);
+        $this->assertSame(200, $response->getStatusCode());
+    }
 
-    it('retries on retryable status codes', function () {
+    public function test_retries_on_retryable_status_codes(): void
+    {
         $config = new RetryConfig(
             maxAttempts: 3,
             baseDelayMs: 10,
@@ -48,11 +56,12 @@ describe('RetryMiddleware', function () {
 
         $response = $middleware($request, [], $next);
 
-        expect($callCount)->toBe(3);
-        expect($response->getStatusCode())->toBe(200);
-    });
+        $this->assertSame(3, $callCount);
+        $this->assertSame(200, $response->getStatusCode());
+    }
 
-    it('returns last response after max attempts on retryable status', function () {
+    public function test_returns_last_response_after_max_attempts_on_retryable_status(): void
+    {
         $config = new RetryConfig(
             maxAttempts: 2,
             baseDelayMs: 10,
@@ -71,11 +80,12 @@ describe('RetryMiddleware', function () {
 
         $response = $middleware($request, [], $next);
 
-        expect($callCount)->toBe(2);
-        expect($response->getStatusCode())->toBe(503);
-    });
+        $this->assertSame(2, $callCount);
+        $this->assertSame(503, $response->getStatusCode());
+    }
 
-    it('retries on retryable exceptions', function () {
+    public function test_retries_on_retryable_exceptions(): void
+    {
         $config = new RetryConfig(
             maxAttempts: 3,
             baseDelayMs: 10,
@@ -97,11 +107,12 @@ describe('RetryMiddleware', function () {
 
         $response = $middleware($request, [], $next);
 
-        expect($callCount)->toBe(3);
-        expect($response->getStatusCode())->toBe(200);
-    });
+        $this->assertSame(3, $callCount);
+        $this->assertSame(200, $response->getStatusCode());
+    }
 
-    it('throws after max attempts on exception', function () {
+    public function test_throws_after_max_attempts_on_exception(): void
+    {
         $config = new RetryConfig(
             maxAttempts: 2,
             baseDelayMs: 10,
@@ -118,17 +129,22 @@ describe('RetryMiddleware', function () {
             throw new NetworkConnectionException('Connection failed');
         };
 
-        expect(fn () => $middleware($request, [], $next))
-            ->toThrow(NetworkConnectionException::class);
-        expect($callCount)->toBe(2);
-    });
+        try {
+            $middleware($request, [], $next);
+            $this->fail('Expected NetworkConnectionException');
+        } catch (NetworkConnectionException $e) {
+            // expected
+        }
+        $this->assertSame(2, $callCount);
+    }
 
-    it('does not retry on non-retryable exceptions', function () {
+    public function test_does_not_retry_on_non_retryable_exceptions(): void
+    {
         $config = new RetryConfig(
             maxAttempts: 3,
             baseDelayMs: 10,
             maxDelayMs: 100,
-            retryableExceptions: [NetworkConnectionException::class] // Only network exceptions
+            retryableExceptions: [NetworkConnectionException::class]
         );
         $middleware = new RetryMiddleware($config);
         $request = new Request('GET', 'https://example.com/api');
@@ -139,12 +155,16 @@ describe('RetryMiddleware', function () {
             throw new \RuntimeException('Non-retryable');
         };
 
-        expect(fn () => $middleware($request, [], $next))
-            ->toThrow(\RuntimeException::class);
-        expect($callCount)->toBe(1);
-    });
+        try {
+            $middleware($request, [], $next);
+            $this->fail('Expected RuntimeException');
+        } catch (\RuntimeException $e) {
+            $this->assertSame(1, $callCount);
+        }
+    }
 
-    it('uses exponential backoff with jitter', function () {
+    public function test_uses_exponential_backoff_with_jitter(): void
+    {
         $config = new RetryConfig(
             maxAttempts: 2,
             baseDelayMs: 50,
@@ -165,7 +185,6 @@ describe('RetryMiddleware', function () {
         $middleware($request, [], $next);
         $elapsed = (microtime(true) - $start) * 1000;
 
-        // Should have some delay but with jitter it can be anywhere from 0 to baseDelay
-        expect($elapsed)->toBeLessThan(200); // Max realistic delay
-    });
-});
+        $this->assertLessThan(200, $elapsed);
+    }
+}

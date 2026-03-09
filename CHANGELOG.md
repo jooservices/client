@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-10
+
+### Added
+- **Logging**: Automatic IP metadata in request logs (`local_ip`, `target_ip`, `target_hostname`, `wan_ip`) when logging is enabled via `ClientBuilder::withLogger()`.
+- **Quality**: Coverage gate script (`scripts/coverage-check.php`) enforcing 98% minimum coverage in CI.
+- **Tests**: PHPUnit test groups (`unit`, `integration`, `arch`, `feature`) for targeted test runs.
+
+### Changed
+- **Tests**: Migrated test suite from Pest to PHPUnit 12; all tests converted to PHPUnit style.
+- **Docs**: Documentation updated for PHPUnit, version 1.1.0, and PHP 8.5 requirement.
+- **Quality**: `composer test` now runs PHPUnit and the coverage gate.
+
+### Removed
+- **Tests**: Removed Pest dependency and `tests/Pest.php`; consolidated bootstrap in `tests/TestCase.php`.
+
+---
+
 ## [1.0.0] - 2026-03-08
 
 ### Added

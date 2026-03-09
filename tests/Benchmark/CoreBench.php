@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace JOOservices\Client\Tests\Benchmark;
 
 use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Client\ClientBuilder;
@@ -21,18 +20,9 @@ class CoreBench
 
     public function __construct()
     {
-        // Setup shared Mock Handler for fairness
-        // We use a static response handler that doesn't consume queue for infinite iterations.
+        // Use static responses so the handler works for long benchmark runs.
         $handler = function ($request, $options) {
-            return \GuzzleHttp\Promise\Create::promiseFor(
-                new Response(200, [], '{"status":"ok"}')
-            );
-        };
-        $stack = HandlerStack::create($handler);
-        // We need an infinite queue for benchmarks, or reset it.
-        // MockHandler is tricky with 1000 revs.
-        // Better to use a static response handler that doesn't consume queue.
-        $handler = function ($request, $options) {
+            unset($request, $options);
             return \GuzzleHttp\Promise\Create::promiseFor(
                 new Response(200, [], '{"status":"ok"}')
             );

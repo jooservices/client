@@ -2,7 +2,7 @@
 
 A robust, layered HTTP Client wrapper designed for extensibility, strict typing, and high performance. Built with a "Clean Architecture" approach, decoupling the business logic from the underlying Guzzle transport.
 
-[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.2-blue)](https://php.net/)
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.5-blue)](https://php.net/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## Features
@@ -103,8 +103,30 @@ composer quality
 This runs:
 - **Pint**: Code Style Fixer
 - **PHPStan**: Static Analysis (Level 9)
-- **Pest**: Unit & Feature Tests
+- **PHPUnit**: Unit, Feature & Integration Tests (with 98% coverage gate)
 - **PHPBench**: Performance Analysis
+
+## Docker Development
+
+If PHP is not installed locally, run everything in Docker.
+
+```bash
+docker compose up -d --build mongodb
+docker compose run --rm php composer install
+docker compose run --rm php composer test
+```
+
+For live network integration tests (real sites), run:
+
+```bash
+docker compose run --rm -e JOOCLIENT_RUN_LIVE_NETWORK_TESTS=1 php \
+    vendor/bin/phpunit tests/Feature/Logging/RealSiteIpLoggingTest.php
+```
+
+This test hits:
+- `https://httpbin.org/get`
+- `https://example.com`
+- `https://google.com`
 
 ## Contributing
 

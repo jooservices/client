@@ -1,0 +1,26 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      DB_CONNECTION: mongodb
+      MONGODB_URI: mongodb://mongodb:27017/?serverSelectionTimeoutMS=3000
+      MONGODB_DATABASE: jooclient_test
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s

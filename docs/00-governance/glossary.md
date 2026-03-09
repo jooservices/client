@@ -210,12 +210,12 @@ All readers, especially new contributors and users.
 
 **Note**: Despite name, this library is NOT Laravel-specific in v1.0.0
 
-### Pest
+### PHPUnit
 **Purpose**: PHP testing framework
 
-**Version**: ^4.0 (dev dependency)
+**Version**: ^12.0 (dev dependency)
 
-**Usage**: All tests written in Pest syntax
+**Usage**: All tests written in PHPUnit (unit, feature, integration, arch groups)
 
 ### PHPStan
 **Purpose**: Static analysis tool

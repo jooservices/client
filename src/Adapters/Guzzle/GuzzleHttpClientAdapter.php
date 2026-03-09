@@ -25,10 +25,10 @@ final readonly class GuzzleHttpClientAdapter implements TransportAdapterInterfac
     {
         try {
             return $this->client->send($request, $options);
-        } catch (ConnectException $e) {
-            $this->handleConnectException($e);
-        } catch (GuzzleException $e) {
-            throw new ClientException('HTTP Client error: ' . $e->getMessage(), 0, $e);
+        } catch (ConnectException $exception) {
+            $this->handleConnectException($exception);
+        } catch (GuzzleException $exception) {
+            throw new ClientException('HTTP Client error: ' . $exception->getMessage(), 0, $exception);
         }
     }
 
@@ -52,12 +52,12 @@ final readonly class GuzzleHttpClientAdapter implements TransportAdapterInterfac
     /**
      * @throws NetworkConnectionException|TimeoutException
      */
-    private function handleConnectException(ConnectException $e): never
+    private function handleConnectException(ConnectException $exception): never
     {
-        $message = strtolower($e->getMessage());
+        $message = strtolower($exception->getMessage());
         if (str_contains($message, 'timeout') || str_contains($message, 'timed out')) {
-            throw new TimeoutException('Request timed out: ' . $e->getMessage(), 0, $e);
+            throw new TimeoutException('Request timed out: ' . $exception->getMessage(), 0, $exception);
         }
-        throw new NetworkConnectionException('Network connection failed: ' . $e->getMessage(), 0, $e);
+        throw new NetworkConnectionException('Network connection failed: ' . $exception->getMessage(), 0, $exception);
     }
 }

@@ -2,12 +2,19 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Middleware;
+
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Middleware\InterceptorMiddleware;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-describe('InterceptorMiddleware', function () {
-    it('runs request interceptors', function () {
+#[Group('unit')]
+class InterceptorMiddlewareTest extends TestCase
+{
+    public function test_runs_request_interceptors(): void
+    {
         $middleware = new InterceptorMiddleware();
 
         $middleware->onRequest(function ($request, $options) {
@@ -18,14 +25,15 @@ describe('InterceptorMiddleware', function () {
         $response = new Response(200);
 
         $next = function ($req, $opts) use ($response) {
-            expect($req->getHeaderLine('X-Interceptor'))->toBe('Run');
+            $this->assertSame('Run', $req->getHeaderLine('X-Interceptor'));
             return $response;
         };
 
         $middleware($request, [], $next);
-    });
+    }
 
-    it('runs response interceptors', function () {
+    public function test_runs_response_interceptors(): void
+    {
         $middleware = new InterceptorMiddleware();
 
         $middleware->onResponse(function ($response, $options) {
@@ -39,10 +47,11 @@ describe('InterceptorMiddleware', function () {
 
         $result = $middleware($request, [], $next);
 
-        expect($result->getHeaderLine('X-Res-Interceptor'))->toBe('Run');
-    });
+        $this->assertSame('Run', $result->getHeaderLine('X-Res-Interceptor'));
+    }
 
-    it('chains interceptors', function () {
+    public function test_chains_interceptors(): void
+    {
         $middleware = new InterceptorMiddleware();
 
         $middleware->onRequest(fn ($r) => $r->withHeader('X-1', 'A'));
@@ -52,11 +61,11 @@ describe('InterceptorMiddleware', function () {
         $response = new Response(200);
 
         $next = function ($req, $opts) use ($response) {
-            expect($req->getHeaderLine('X-1'))->toBe('A');
-            expect($req->getHeaderLine('X-2'))->toBe('B');
+            $this->assertSame('A', $req->getHeaderLine('X-1'));
+            $this->assertSame('B', $req->getHeaderLine('X-2'));
             return $response;
         };
 
         $middleware($request, [], $next);
-    });
-});
+    }
+}

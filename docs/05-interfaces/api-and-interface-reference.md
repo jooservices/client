@@ -265,6 +265,13 @@ $builder->withCache($cache, 3600);
 
 **Returns**: Builder instance
 
+**Automatic IP Metadata**:
+- Enabling logger automatically collects and logs:
+- `local_ip` (LAN/interface IP used for socket)
+- `target_ip` (remote IP connected by transport)
+- `target_hostname` (request URI host)
+- `wan_ip` (public egress IP via cached resolver, fail-open)
+
 **Example**:
 ```php
 use Monolog\Logger;

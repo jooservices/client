@@ -2,56 +2,71 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Support;
+
 use JOOservices\Client\Support\OptionsMerger;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-describe('OptionsMerger', function () {
-    beforeEach(function () {
+#[Group('unit')]
+class OptionsMergerTest extends TestCase
+{
+    private OptionsMerger $merger;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
         $this->merger = new OptionsMerger();
-    });
+    }
 
-    it('merges simple arrays with request options taking precedence', function () {
+    public function test_merges_simple_arrays_with_request_options_taking_precedence(): void
+    {
         $base = ['timeout' => 30, 'verify' => true];
         $request = ['timeout' => 60];
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 60,
             'verify' => true,
-        ]);
-    });
+        ], $result);
+    }
 
-    it('merges empty base options with request options', function () {
+    public function test_merges_empty_base_options_with_request_options(): void
+    {
         $base = [];
         $request = ['timeout' => 60, 'verify' => false];
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 60,
             'verify' => false,
-        ]);
-    });
+        ], $result);
+    }
 
-    it('merges base options with empty request options', function () {
+    public function test_merges_base_options_with_empty_request_options(): void
+    {
         $base = ['timeout' => 30, 'verify' => true];
         $request = [];
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 30,
             'verify' => true,
-        ]);
-    });
+        ], $result);
+    }
 
-    it('merges both empty arrays', function () {
+    public function test_merges_both_empty_arrays(): void
+    {
         $result = $this->merger->merge([], []);
 
-        expect($result)->toBe([]);
-    });
+        $this->assertSame([], $result);
+    }
 
-    it('deep merges headers from both arrays', function () {
+    public function test_deep_merges_headers_from_both_arrays(): void
+    {
         $base = [
             'timeout' => 30,
             'headers' => [
@@ -69,17 +84,18 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 30,
             'headers' => [
                 'User-Agent' => 'BaseClient/1.0',
-                'Accept' => 'application/xml', // Request overrides base
+                'Accept' => 'application/xml',
                 'Authorization' => 'Bearer token123',
             ],
-        ]);
-    });
+        ], $result);
+    }
 
-    it('handles headers in base options only', function () {
+    public function test_handles_headers_in_base_options_only(): void
+    {
         $base = [
             'timeout' => 30,
             'headers' => [
@@ -93,15 +109,16 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 60,
             'headers' => [
                 'User-Agent' => 'BaseClient/1.0',
             ],
-        ]);
-    });
+        ], $result);
+    }
 
-    it('handles headers in request options only', function () {
+    public function test_handles_headers_in_request_options_only(): void
+    {
         $base = [
             'timeout' => 30,
         ];
@@ -114,15 +131,16 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 30,
             'headers' => [
                 'Authorization' => 'Bearer token123',
             ],
-        ]);
-    });
+        ], $result);
+    }
 
-    it('handles non-array headers in base options', function () {
+    public function test_handles_non_array_headers_in_base_options(): void
+    {
         $base = [
             'timeout' => 30,
             'headers' => 'invalid',
@@ -136,15 +154,16 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 30,
             'headers' => [
                 'Authorization' => 'Bearer token123',
             ],
-        ]);
-    });
+        ], $result);
+    }
 
-    it('handles non-array headers in request options', function () {
+    public function test_handles_non_array_headers_in_request_options(): void
+    {
         $base = [
             'headers' => [
                 'User-Agent' => 'BaseClient/1.0',
@@ -157,12 +176,13 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'headers' => 'invalid',
-        ]);
-    });
+        ], $result);
+    }
 
-    it('merges complex nested options', function () {
+    public function test_merges_complex_nested_options(): void
+    {
         $base = [
             'timeout' => 30,
             'headers' => [
@@ -182,18 +202,19 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 60,
             'headers' => [
                 'User-Agent' => 'BaseClient/1.0',
                 'Authorization' => 'Bearer token123',
             ],
-            'query' => ['page' => 2, 'limit' => 10], // Request replaces base (not deep merged)
+            'query' => ['page' => 2, 'limit' => 10],
             'verify' => true,
-        ]);
-    });
+        ], $result);
+    }
 
-    it('handles null values in options', function () {
+    public function test_handles_null_values_in_options(): void
+    {
         $base = [
             'timeout' => 30,
             'verify' => true,
@@ -205,13 +226,14 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => null,
             'verify' => true,
-        ]);
-    });
+        ], $result);
+    }
 
-    it('preserves numeric keys', function () {
+    public function test_preserves_numeric_keys(): void
+    {
         $base = [
             0 => 'value1',
             'key' => 'value2',
@@ -224,14 +246,15 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             0 => 'value1',
             'key' => 'value4',
             1 => 'value3',
-        ]);
-    });
+        ], $result);
+    }
 
-    it('handles empty header arrays', function () {
+    public function test_handles_empty_header_arrays(): void
+    {
         $base = [
             'timeout' => 30,
             'headers' => [],
@@ -243,13 +266,14 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result)->toBe([
+        $this->assertSame([
             'timeout' => 30,
             'headers' => [],
-        ]);
-    });
+        ], $result);
+    }
 
-    it('merges case-sensitive header keys correctly', function () {
+    public function test_merges_case_sensitive_header_keys_correctly(): void
+    {
         $base = [
             'headers' => [
                 'Content-Type' => 'application/json',
@@ -265,9 +289,9 @@ describe('OptionsMerger', function () {
 
         $result = $this->merger->merge($base, $request);
 
-        expect($result['headers'])->toBe([
+        $this->assertSame([
             'Content-Type' => 'application/xml',
             'content-type' => 'should-be-different',
-        ]);
-    });
-});
+        ], $result['headers']);
+    }
+}

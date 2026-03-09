@@ -2,39 +2,49 @@
 
 declare(strict_types=1);
 
-use JOOservices\Client\Cache\MemoryCache;
+namespace Tests\Unit\Cache;
 
-describe('MemoryCache', function () {
-    it('returns default for non-existent key', function () {
+use JOOservices\Client\Cache\MemoryCache;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
+
+#[Group('unit')]
+class MemoryCacheTest extends TestCase
+{
+    public function test_returns_default_for_non_existent_key(): void
+    {
         $cache = new MemoryCache();
 
-        expect($cache->get('non_existent'))->toBeNull();
-        expect($cache->get('non_existent', 'default'))->toBe('default');
-    });
+        $this->assertNull($cache->get('non_existent'));
+        $this->assertSame('default', $cache->get('non_existent', 'default'));
+    }
 
-    it('stores and retrieves values', function () {
+    public function test_stores_and_retrieves_values(): void
+    {
         $cache = new MemoryCache();
 
         $cache->set('key1', 'value1');
         $cache->set('key2', ['array' => 'value']);
 
-        expect($cache->get('key1'))->toBe('value1');
-        expect($cache->get('key2'))->toBe(['array' => 'value']);
-    });
+        $this->assertSame('value1', $cache->get('key1'));
+        $this->assertSame(['array' => 'value'], $cache->get('key2'));
+    }
 
-    it('deletes values', function () {
+    public function test_deletes_values(): void
+    {
         $cache = new MemoryCache();
 
         $cache->set('key', 'value');
-        expect($cache->get('key'))->toBe('value');
+        $this->assertSame('value', $cache->get('key'));
 
         $result = $cache->delete('key');
 
-        expect($result)->toBeTrue();
-        expect($cache->get('key'))->toBeNull();
-    });
+        $this->assertTrue($result);
+        $this->assertNull($cache->get('key'));
+    }
 
-    it('clears all values', function () {
+    public function test_clears_all_values(): void
+    {
         $cache = new MemoryCache();
 
         $cache->set('key1', 'value1');
@@ -42,57 +52,59 @@ describe('MemoryCache', function () {
 
         $result = $cache->clear();
 
-        expect($result)->toBeTrue();
-        expect($cache->get('key1'))->toBeNull();
-        expect($cache->get('key2'))->toBeNull();
-    });
+        $this->assertTrue($result);
+        $this->assertNull($cache->get('key1'));
+        $this->assertNull($cache->get('key2'));
+    }
 
-    it('checks if key exists with has()', function () {
+    public function test_checks_if_key_exists_with_has(): void
+    {
         $cache = new MemoryCache();
 
-        expect($cache->has('key'))->toBeFalse();
+        $this->assertFalse($cache->has('key'));
 
         $cache->set('key', 'value');
 
-        expect($cache->has('key'))->toBeTrue();
-    });
+        $this->assertTrue($cache->has('key'));
+    }
 
-    it('handles null values correctly with has()', function () {
+    public function test_handles_null_values_correctly_with_has(): void
+    {
         $cache = new MemoryCache();
 
         $cache->set('null_key', null);
 
-        // has() should return true even for null values
-        expect($cache->has('null_key'))->toBeTrue();
-    });
+        $this->assertTrue($cache->has('null_key'));
+    }
 
-    it('respects TTL and expires cache', function () {
+    public function test_respects_TTL_and_expires_cache(): void
+    {
         $cache = new MemoryCache();
 
-        // Set with 1 second TTL
         $cache->set('expiring_key', 'value', 1);
 
-        expect($cache->get('expiring_key'))->toBe('value');
+        $this->assertSame('value', $cache->get('expiring_key'));
 
-        // Wait for expiration
         sleep(2);
 
-        expect($cache->get('expiring_key'))->toBeNull();
-    });
+        $this->assertNull($cache->get('expiring_key'));
+    }
 
-    it('supports DateInterval TTL', function () {
+    public function test_supports_DateInterval_TTL(): void
+    {
         $cache = new MemoryCache();
 
-        $cache->set('interval_key', 'value', new DateInterval('PT1S'));
+        $cache->set('interval_key', 'value', new \DateInterval('PT1S'));
 
-        expect($cache->get('interval_key'))->toBe('value');
+        $this->assertSame('value', $cache->get('interval_key'));
 
         sleep(2);
 
-        expect($cache->get('interval_key'))->toBeNull();
-    });
+        $this->assertNull($cache->get('interval_key'));
+    }
 
-    it('handles getMultiple', function () {
+    public function test_handles_getMultiple(): void
+    {
         $cache = new MemoryCache();
 
         $cache->set('key1', 'value1');
@@ -100,14 +112,15 @@ describe('MemoryCache', function () {
 
         $result = $cache->getMultiple(['key1', 'key2', 'key3'], 'default');
 
-        expect($result)->toBe([
+        $this->assertSame([
             'key1' => 'value1',
             'key2' => 'value2',
             'key3' => 'default',
-        ]);
-    });
+        ], $result);
+    }
 
-    it('handles setMultiple', function () {
+    public function test_handles_setMultiple(): void
+    {
         $cache = new MemoryCache();
 
         $result = $cache->setMultiple([
@@ -115,12 +128,13 @@ describe('MemoryCache', function () {
             'key2' => 'value2',
         ]);
 
-        expect($result)->toBeTrue();
-        expect($cache->get('key1'))->toBe('value1');
-        expect($cache->get('key2'))->toBe('value2');
-    });
+        $this->assertTrue($result);
+        $this->assertSame('value1', $cache->get('key1'));
+        $this->assertSame('value2', $cache->get('key2'));
+    }
 
-    it('handles deleteMultiple', function () {
+    public function test_handles_deleteMultiple(): void
+    {
         $cache = new MemoryCache();
 
         $cache->set('key1', 'value1');
@@ -129,9 +143,9 @@ describe('MemoryCache', function () {
 
         $result = $cache->deleteMultiple(['key1', 'key2']);
 
-        expect($result)->toBeTrue();
-        expect($cache->get('key1'))->toBeNull();
-        expect($cache->get('key2'))->toBeNull();
-        expect($cache->get('key3'))->toBe('value3');
-    });
-});
+        $this->assertTrue($result);
+        $this->assertNull($cache->get('key1'));
+        $this->assertNull($cache->get('key2'));
+        $this->assertSame('value3', $cache->get('key3'));
+    }
+}

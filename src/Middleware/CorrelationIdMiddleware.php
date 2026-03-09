@@ -21,14 +21,11 @@ class CorrelationIdMiddleware implements MiddlewareInterface
         }
         $headerName = $correlationHeader;
 
-        if (!$request->hasHeader($headerName)) {
-            // Generate UUID v4 (simple version to avoid Ramsey dependency for now)
-            // Or use uniqid() as fallback if random_bytes not avail?
-            // PHP 8.2 has random_bytes which is standard.
+        $uuid = $request->getHeaderLine($headerName);
+        if ($uuid === '') {
+            // Generate UUID v4 when the request did not include a correlation ID.
             $uuid = $this->generateUuid();
             $request = $request->withHeader($headerName, $uuid);
-        } else {
-            $uuid = $request->getHeaderLine($headerName);
         }
 
         $response = $next($request, $options);

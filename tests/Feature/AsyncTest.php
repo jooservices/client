@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Tests\Feature;
+
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -9,183 +11,197 @@ use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Client\ClientBuilder;
 use JOOservices\Client\Contracts\AsyncHttpClientInterface;
 use JOOservices\Client\Contracts\ResponseWrapperInterface;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-test('async request returns a promise resolving to response wrapper', function () {
-    $mock = new MockHandler([
-        new Response(200, [], '{"data": "async"}'),
-    ]);
-    $handler = HandlerStack::create($mock);
+#[Group('feature')]
+class AsyncTest extends TestCase
+{
+    public function test_async_request_returns_a_promise_resolving_to_response_wrapper(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"data": "async"}'),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->build();
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->build();
 
-    /** @var AsyncHttpClientInterface $client */
-    $promise = $client->getAsync('/test');
+        /** @var AsyncHttpClientInterface $client */
+        $promise = $client->getAsync('/test');
 
-    expect($promise)->toBeInstanceOf(PromiseInterface::class);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-    $response = $promise->wait();
-    expect($response)->toBeInstanceOf(ResponseWrapperInterface::class);
-    expect($response->status())->toBe(200);
-    expect($response->json())->toBe(['data' => 'async']);
-});
+        $response = $promise->wait();
+        $this->assertInstanceOf(ResponseWrapperInterface::class, $response);
+        $this->assertSame(200, $response->status());
+        $this->assertSame(['data' => 'async'], $response->json());
+    }
 
-test('batch executes multiple requests concurrently', function () {
-    $mock = new MockHandler([
-        new Response(200, [], '{"id": 1}'),
-        new Response(200, [], '{"id": 2}'),
-        new Response(200, [], '{"id": 3}'),
-    ]);
-    $handler = HandlerStack::create($mock);
+    public function test_batch_executes_multiple_requests_concurrently(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"id": 1}'),
+            new Response(200, [], '{"id": 2}'),
+            new Response(200, [], '{"id": 3}'),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->build();
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->build();
 
-    /** @var AsyncHttpClientInterface $client */
-    $results = $client->batch([
-        'r1' => fn () => $client->getAsync('/1'),
-        'r2' => fn () => $client->getAsync('/2'),
-        'r3' => fn () => $client->getAsync('/3'),
-    ]);
+        /** @var AsyncHttpClientInterface $client */
+        $results = $client->batch([
+            'r1' => fn () => $client->getAsync('/1'),
+            'r2' => fn () => $client->getAsync('/2'),
+            'r3' => fn () => $client->getAsync('/3'),
+        ]);
 
-    expect($results)->toHaveCount(3);
-    expect($results['r3']->json())->toBe(['id' => 3]);
-});
+        $this->assertCount(3, $results);
+        $this->assertSame(['id' => 3], $results['r3']->json());
+    }
 
-test('batch executes Request objects concurrently', function () {
-    $mock = new MockHandler([
-        new Response(200, [], '{"id": 1}'),
-        new Response(200, [], '{"id": 2}'),
-    ]);
-    $handler = HandlerStack::create($mock);
+    public function test_batch_executes_Request_objects_concurrently(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"id": 1}'),
+            new Response(200, [], '{"id": 2}'),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->build();
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->build();
 
-    /** @var AsyncHttpClientInterface $client */
-    $results = $client->batch([
-        'r1' => new \GuzzleHttp\Psr7\Request('GET', 'http://example.com/1'),
-        'r2' => new \GuzzleHttp\Psr7\Request('GET', 'http://example.com/2'),
-    ]);
+        /** @var AsyncHttpClientInterface $client */
+        $results = $client->batch([
+            'r1' => new \GuzzleHttp\Psr7\Request('GET', 'http://example.com/1'),
+            'r2' => new \GuzzleHttp\Psr7\Request('GET', 'http://example.com/2'),
+        ]);
 
-    expect($results)->toHaveCount(2);
-    expect($results['r1']->json())->toBe(['id' => 1]);
-    expect($results['r2']->json())->toBe(['id' => 2]);
-});
+        $this->assertCount(2, $results);
+        $this->assertSame(['id' => 1], $results['r1']->json());
+        $this->assertSame(['id' => 2], $results['r2']->json());
+    }
 
-test('async POST request returns a promise with posted data', function () {
-    $mock = new MockHandler([
-        new Response(201, [], '{"created": true, "id": 123}'),
-    ]);
-    $handler = HandlerStack::create($mock);
+    public function test_async_POST_request_returns_a_promise_with_posted_data(): void
+    {
+        $mock = new MockHandler([
+            new Response(201, [], '{"created": true, "id": 123}'),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->build();
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->build();
 
-    /** @var AsyncHttpClientInterface $client */
-    $promise = $client->postAsync('/users', [
-        'json' => ['name' => 'John Doe', 'email' => 'john@example.com'],
-    ]);
+        /** @var AsyncHttpClientInterface $client */
+        $promise = $client->postAsync('/users', [
+            'json' => ['name' => 'John Doe', 'email' => 'john@example.com'],
+        ]);
 
-    expect($promise)->toBeInstanceOf(PromiseInterface::class);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-    $response = $promise->wait();
-    expect($response)->toBeInstanceOf(ResponseWrapperInterface::class);
-    expect($response->status())->toBe(201);
-    expect($response->json())->toBe(['created' => true, 'id' => 123]);
-});
+        $response = $promise->wait();
+        $this->assertInstanceOf(ResponseWrapperInterface::class, $response);
+        $this->assertSame(201, $response->status());
+        $this->assertSame(['created' => true, 'id' => 123], $response->json());
+    }
 
-test('async PUT request returns a promise with updated data', function () {
-    $mock = new MockHandler([
-        new Response(200, [], '{"updated": true, "id": 456}'),
-    ]);
-    $handler = HandlerStack::create($mock);
+    public function test_async_PUT_request_returns_a_promise_with_updated_data(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"updated": true, "id": 456}'),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->build();
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->build();
 
-    /** @var AsyncHttpClientInterface $client */
-    $promise = $client->requestAsync('PUT', '/users/456', [
-        'json' => ['name' => 'Jane Doe'],
-    ]);
+        /** @var AsyncHttpClientInterface $client */
+        $promise = $client->requestAsync('PUT', '/users/456', [
+            'json' => ['name' => 'Jane Doe'],
+        ]);
 
-    expect($promise)->toBeInstanceOf(PromiseInterface::class);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-    $response = $promise->wait();
-    expect($response)->toBeInstanceOf(ResponseWrapperInterface::class);
-    expect($response->status())->toBe(200);
-    expect($response->json())->toBe(['updated' => true, 'id' => 456]);
-});
+        $response = $promise->wait();
+        $this->assertInstanceOf(ResponseWrapperInterface::class, $response);
+        $this->assertSame(200, $response->status());
+        $this->assertSame(['updated' => true, 'id' => 456], $response->json());
+    }
 
-test('async PATCH request returns a promise with partial update', function () {
-    $mock = new MockHandler([
-        new Response(200, [], '{"patched": true, "field": "value"}'),
-    ]);
-    $handler = HandlerStack::create($mock);
+    public function test_async_PATCH_request_returns_a_promise_with_partial_update(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"patched": true, "field": "value"}'),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->build();
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->build();
 
-    /** @var AsyncHttpClientInterface $client */
-    $promise = $client->requestAsync('PATCH', '/resources/789', [
-        'json' => ['status' => 'active'],
-    ]);
+        /** @var AsyncHttpClientInterface $client */
+        $promise = $client->requestAsync('PATCH', '/resources/789', [
+            'json' => ['status' => 'active'],
+        ]);
 
-    expect($promise)->toBeInstanceOf(PromiseInterface::class);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-    $response = $promise->wait();
-    expect($response)->toBeInstanceOf(ResponseWrapperInterface::class);
-    expect($response->status())->toBe(200);
-    expect($response->json())->toBe(['patched' => true, 'field' => 'value']);
-});
+        $response = $promise->wait();
+        $this->assertInstanceOf(ResponseWrapperInterface::class, $response);
+        $this->assertSame(200, $response->status());
+        $this->assertSame(['patched' => true, 'field' => 'value'], $response->json());
+    }
 
-test('async DELETE request returns a promise with deletion confirmation', function () {
-    $mock = new MockHandler([
-        new Response(204, [], ''),
-    ]);
-    $handler = HandlerStack::create($mock);
+    public function test_async_DELETE_request_returns_a_promise_with_deletion_confirmation(): void
+    {
+        $mock = new MockHandler([
+            new Response(204, [], ''),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->build();
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->build();
 
-    /** @var AsyncHttpClientInterface $client */
-    $promise = $client->requestAsync('DELETE', '/resources/999');
+        /** @var AsyncHttpClientInterface $client */
+        $promise = $client->requestAsync('DELETE', '/resources/999');
 
-    expect($promise)->toBeInstanceOf(PromiseInterface::class);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-    $response = $promise->wait();
-    expect($response)->toBeInstanceOf(ResponseWrapperInterface::class);
-    expect($response->status())->toBe(204);
-});
+        $response = $promise->wait();
+        $this->assertInstanceOf(ResponseWrapperInterface::class, $response);
+        $this->assertSame(204, $response->status());
+    }
 
-test('batch executes mixed POST and GET requests concurrently', function () {
-    $mock = new MockHandler([
-        new Response(200, [], '{"type": "get", "id": 1}'),
-        new Response(201, [], '{"type": "post", "created": true}'),
-        new Response(200, [], '{"type": "get", "id": 2}'),
-    ]);
-    $handler = HandlerStack::create($mock);
+    public function test_batch_executes_mixed_POST_and_GET_requests_concurrently(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"type": "get", "id": 1}'),
+            new Response(201, [], '{"type": "post", "created": true}'),
+            new Response(200, [], '{"type": "get", "id": 2}'),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->build();
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->build();
 
-    /** @var AsyncHttpClientInterface $client */
-    $results = $client->batch([
-        'get1' => fn () => $client->getAsync('/item/1'),
-        'post' => fn () => $client->postAsync('/items', ['json' => ['name' => 'New Item']]),
-        'get2' => fn () => $client->getAsync('/item/2'),
-    ]);
+        /** @var AsyncHttpClientInterface $client */
+        $results = $client->batch([
+            'get1' => fn () => $client->getAsync('/item/1'),
+            'post' => fn () => $client->postAsync('/items', ['json' => ['name' => 'New Item']]),
+            'get2' => fn () => $client->getAsync('/item/2'),
+        ]);
 
-    expect($results)->toHaveCount(3);
-    expect($results['get1']->status())->toBe(200);
-    expect($results['post']->status())->toBe(201);
-    expect($results['get2']->status())->toBe(200);
-});
+        $this->assertCount(3, $results);
+        $this->assertSame(200, $results['get1']->status());
+        $this->assertSame(201, $results['post']->status());
+        $this->assertSame(200, $results['get2']->status());
+    }
+}

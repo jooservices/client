@@ -886,11 +886,13 @@ class HttpClient {
 ```
 tests/
 ├── Unit/           # Isolated component tests (mocked dependencies)
-├── Feature/        # Integration tests (real objects, minimal mocking)
+├── Feature/        # Feature tests (real objects, minimal mocking)
+├── Integration/    # Integration tests
+├── Arch/           # Architecture tests
 └── Benchmark/      # Performance tests (PHPBench)
 ```
 
-**Evidence**: Directory structure, Pest configuration
+**Evidence**: Directory structure, `phpunit.xml` configuration
 
 **Confidence**: Confirmed
 

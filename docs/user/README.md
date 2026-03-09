@@ -87,6 +87,9 @@ $logger->pushHandler(new StreamHandler('php://stdout'));
 $client = ClientBuilder::create()
     ->withLogger($logger, logBodies: true)
     ->build();
+
+// IP metadata is captured automatically when logging is enabled:
+// local_ip, target_ip, target_hostname, wan_ip
 ```
 
 ## 🔗 See Also

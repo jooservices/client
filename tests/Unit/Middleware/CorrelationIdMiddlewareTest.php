@@ -2,27 +2,34 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Middleware;
+
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Middleware\CorrelationIdMiddleware;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-describe('CorrelationIdMiddleware', function () {
-    it('adds X-Correlation-ID header if missing', function () {
+#[Group('unit')]
+class CorrelationIdMiddlewareTest extends TestCase
+{
+    public function test_adds_X_Correlation_ID_header_if_missing(): void
+    {
         $middleware = new CorrelationIdMiddleware();
         $request = new Request('GET', 'https://example.com/api');
 
         $next = function ($req, $opts) {
-            // Verify header was added
-            expect($req->hasHeader('X-Correlation-ID'))->toBeTrue();
-            expect($req->getHeaderLine('X-Correlation-ID'))->not->toBeEmpty();
+            $this->assertTrue($req->hasHeader('X-Correlation-ID'));
+            $this->assertNotEmpty($req->getHeaderLine('X-Correlation-ID'));
 
             return new Response(200);
         };
 
         $middleware($request, [], $next);
-    });
+    }
 
-    it('does not overwrite existing X-Correlation-ID header', function () {
+    public function test_does_not_overwrite_existing_X_Correlation_ID_header(): void
+    {
         $middleware = new CorrelationIdMiddleware();
         $existingId = 'existing-correlation-id-123';
         $request = new Request('GET', 'https://example.com/api', [
@@ -30,43 +37,48 @@ describe('CorrelationIdMiddleware', function () {
         ]);
 
         $next = function ($req, $opts) use ($existingId) {
-            expect($req->getHeaderLine('X-Correlation-ID'))->toBe($existingId);
+            $this->assertSame($existingId, $req->getHeaderLine('X-Correlation-ID'));
             return new Response(200);
         };
 
         $middleware($request, [], $next);
-    });
+    }
 
-    it('propagates correlation ID to response', function () {
+    public function test_propagates_correlation_ID_to_response(): void
+    {
         $middleware = new CorrelationIdMiddleware();
         $request = new Request('GET', 'https://example.com/api');
 
-        $next = function ($req, $opts) {
-            // Return response without the header
+        $requestId = null;
+        $next = function ($req, $opts) use (&$requestId) {
+            $requestId = $req->getHeaderLine('X-Correlation-ID');
             return new Response(200);
         };
 
         $response = $middleware($request, [], $next);
 
-        expect($response->hasHeader('X-Correlation-ID'))->toBeTrue();
-    });
+        $this->assertNotEmpty($requestId);
+        $this->assertSame($requestId, $response->getHeaderLine('X-Correlation-ID'));
+    }
 
-    it('uses custom header name from options', function () {
+    public function test_uses_custom_header_name_from_options(): void
+    {
         $middleware = new CorrelationIdMiddleware();
         $request = new Request('GET', 'https://example.com/api');
         $customHeader = 'X-Request-ID';
 
         $next = function ($req, $opts) use ($customHeader) {
-            expect($req->hasHeader($customHeader))->toBeTrue();
+            $this->assertTrue($req->hasHeader($customHeader));
             return new Response(200);
         };
 
         $response = $middleware($request, ['correlation_header' => $customHeader], $next);
 
-        expect($response->hasHeader($customHeader))->toBeTrue();
-    });
+        $this->assertTrue($response->hasHeader($customHeader));
+    }
 
-    it('does not add header to response if already present', function () {
+    public function test_does_not_add_header_to_response_if_already_present(): void
+    {
         $middleware = new CorrelationIdMiddleware();
         $responseId = 'response-correlation-id';
         $request = new Request('GET', 'https://example.com/api');
@@ -77,7 +89,20 @@ describe('CorrelationIdMiddleware', function () {
 
         $response = $middleware($request, [], $next);
 
-        // Should keep the response's original ID
-        expect($response->getHeaderLine('X-Correlation-ID'))->toBe($responseId);
-    });
-});
+        $this->assertSame($responseId, $response->getHeaderLine('X-Correlation-ID'));
+    }
+
+    public function test_falls_back_to_default_header_when_correlation_header_option_is_not_string(): void
+    {
+        $middleware = new CorrelationIdMiddleware();
+        $request = new Request('GET', 'https://example.com/api');
+
+        $next = function ($req, $opts) {
+            $this->assertTrue($req->hasHeader('X-Correlation-ID'));
+            return new Response(200);
+        };
+
+        $middleware($request, ['correlation_header' => ['invalid']], $next);
+        $this->addToAssertionCount(1);
+    }
+}

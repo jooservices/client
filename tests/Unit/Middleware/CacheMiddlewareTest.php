@@ -2,23 +2,30 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Middleware;
+
+use Exception;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Middleware\CacheMiddleware;
+use Mockery;
+use PHPUnit\Framework\Attributes\Group;
 use Psr\SimpleCache\CacheInterface;
+use Tests\TestCase;
 
-describe('CacheMiddleware', function () {
-    it('caches GET requests', function () {
+#[Group('unit')]
+class CacheMiddlewareTest extends TestCase
+{
+    public function test_caches_GET_requests(): void
+    {
         $cache = Mockery::mock(CacheInterface::class);
         $middleware = new CacheMiddleware($cache);
 
         $request = new Request('GET', 'https://example.com');
         $response = new Response(200, ['X-Foo' => 'Bar'], 'body content');
 
-        // Expect cache get
         $cache->shouldReceive('get')->once()->andReturn(null);
 
-        // Expect cache set with correct structure
         $cache->shouldReceive('set')->once()->withArgs(function ($key, $value, $ttl) {
             return str_contains($key, 'http_cache_') &&
                 $value['status'] === 200 &&
@@ -30,11 +37,12 @@ describe('CacheMiddleware', function () {
 
         $result = $middleware($request, [], $next);
 
-        expect($result->getStatusCode())->toBe(200);
-        expect((string) $result->getBody())->toBe('body content');
-    });
+        $this->assertSame(200, $result->getStatusCode());
+        $this->assertSame('body content', (string) $result->getBody());
+    }
 
-    it('returns cached response if hit', function () {
+    public function test_returns_cached_response_if_hit(): void
+    {
         $cache = Mockery::mock(CacheInterface::class);
         $middleware = new CacheMiddleware($cache);
 
@@ -48,17 +56,17 @@ describe('CacheMiddleware', function () {
 
         $cache->shouldReceive('get')->once()->andReturn($cachedValue);
 
-        // Next should NOT be called
         $next = fn ($r, $o) => throw new Exception('Should not be called');
 
         $result = $middleware($request, [], $next);
 
-        expect($result->getStatusCode())->toBe(200);
-        expect($result->getHeaderLine('X-Cached'))->toBe('true');
-        expect((string) $result->getBody())->toBe('cached body');
-    });
+        $this->assertSame(200, $result->getStatusCode());
+        $this->assertSame('true', $result->getHeaderLine('X-Cached'));
+        $this->assertSame('cached body', (string) $result->getBody());
+    }
 
-    it('does not cache non-GET requests', function () {
+    public function test_does_not_cache_non_GET_requests(): void
+    {
         $cache = Mockery::mock(CacheInterface::class);
         $middleware = new CacheMiddleware($cache);
 
@@ -71,9 +79,11 @@ describe('CacheMiddleware', function () {
         $next = fn ($r, $o) => $response;
 
         $middleware($request, [], $next);
-    });
+        $this->addToAssertionCount(1);
+    }
 
-    it('respects cache_ttl option', function () {
+    public function test_respects_cache_ttl_option(): void
+    {
         $cache = Mockery::mock(CacheInterface::class);
         $middleware = new CacheMiddleware($cache, 3600);
 
@@ -81,35 +91,31 @@ describe('CacheMiddleware', function () {
         $response = new Response(200);
 
         $cache->shouldReceive('get')->andReturn(null);
-        // Expect exact TTL 60
         $cache->shouldReceive('set')->with(Mockery::any(), Mockery::any(), 60);
 
         $next = fn ($r, $o) => $response;
 
         $result = $middleware($request, ['cache_ttl' => 60], $next);
 
-        expect($result->getStatusCode())->toBe(200);
-    });
+        $this->assertSame(200, $result->getStatusCode());
+    }
 
-    it('handles cache serialization failure (partial)', function () {
-        // If cache.get throws or returns garbage that isn't an array (if implementation checks)
+    public function test_handles_cache_serialization_failure_partial(): void
+    {
         $cache = Mockery::mock(CacheInterface::class);
         $middleware = new CacheMiddleware($cache);
 
         $request = new Request('GET', 'https://example.com');
 
-        // If returns garbage but implementation checks is_array
-        $cache->shouldReceive('get')->andReturn('garbage'); // Not null, but not array
+        $cache->shouldReceive('get')->andReturn('garbage');
 
-        // It should proceed to next safely if code says `is_array`
         $response = new Response(200);
         $next = fn ($r, $o) => $response;
 
-        // Expect set because it was a "miss" effectively
         $cache->shouldReceive('set');
 
         $result = $middleware($request, [], $next);
 
-        expect($result->getStatusCode())->toBe(200);
-    });
-});
+        $this->assertSame(200, $result->getStatusCode());
+    }
+}

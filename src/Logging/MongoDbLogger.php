@@ -6,6 +6,7 @@ namespace JOOservices\Client\Logging;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use JOOservices\Client\Models\Mongo\ClientRequestLog;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use RuntimeException;
@@ -54,8 +55,18 @@ final class MongoDbLogger implements LoggerInterface
         $this->maxResponseBodyBytes = $maxResponseBodyBytes;
         $this->redactKeys = array_values(array_map(static fn (string $key): string => strtolower($key), $redactKeys));
         $this->writer = $writer ?? function (array $document): void {
-            $this->persistWithIlluminate($document);
+            $this->persistViaModel($document);
         };
+    }
+
+    public function getConnection(): string
+    {
+        return $this->connection;
+    }
+
+    public function getCollection(): string
+    {
+        return $this->collection;
     }
 
     /**
@@ -166,6 +177,10 @@ final class MongoDbLogger implements LoggerInterface
         $this->copyIfPresent($document, $normalizedContext, 'duration_ms');
         $this->copyIfPresent($document, $normalizedContext, 'correlation_id');
         $this->copyIfPresent($document, $normalizedContext, 'exception');
+        $this->copyIfPresent($document, $normalizedContext, 'local_ip');
+        $this->copyIfPresent($document, $normalizedContext, 'wan_ip');
+        $this->copyIfPresent($document, $normalizedContext, 'target_ip');
+        $this->copyIfPresent($document, $normalizedContext, 'target_hostname');
 
         if ($message === 'Request Body' && isset($normalizedContext['body'])) {
             [$payload, $truncated] = $this->trimPayload(
@@ -297,7 +312,7 @@ final class MongoDbLogger implements LoggerInterface
             return '[REDACTED]';
         }
 
-        foreach ($value as $innerKey => $innerValue) {
+        foreach (array_keys($value) as $innerKey) {
             if (is_string($innerKey) && in_array(strtolower($innerKey), $this->redactKeys, true)) {
                 $value[$innerKey] = '[REDACTED]';
             }
@@ -323,38 +338,15 @@ final class MongoDbLogger implements LoggerInterface
     }
 
     /**
+     * Persist via Eloquent model. Uses this logger's connection and collection.
+     *
      * @param array<string, mixed> $document
      */
-    private function persistWithIlluminate(array $document): void
+    private function persistViaModel(array $document): void
     {
-        $dbFacadeClass = 'Illuminate\\Support\\Facades\\DB';
-
-        if (!class_exists($dbFacadeClass)) {
-            throw new RuntimeException(
-                'MongoDbLogger requires Illuminate DB facade and mongodb/laravel-mongodb package, '
-                . 'or provide a custom writer callable.'
-            );
-        }
-
-        /** @var class-string $dbFacadeClass */
-        $connection = $dbFacadeClass::connection($this->connection);
-
-        if (!is_object($connection)) {
-            throw new RuntimeException('MongoDbLogger connection is not an object.');
-        }
-
-        if (method_exists($connection, 'collection')) {
-            $connection->collection($this->collection)->insert($document);
-            return;
-        }
-
-        if (method_exists($connection, 'table')) {
-            $connection->table($this->collection)->insert($document);
-            return;
-        }
-
-        throw new RuntimeException(
-            'MongoDbLogger could not find collection/table insert support on configured connection.'
-        );
+        $model = new ClientRequestLog();
+        $model->setConnection($this->connection);
+        $model->setTable($this->collection);
+        $model->fill($document)->save();
     }
 }

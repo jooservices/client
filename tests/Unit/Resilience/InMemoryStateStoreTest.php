@@ -2,119 +2,134 @@
 
 declare(strict_types=1);
 
-use JOOservices\Client\Resilience\Storage\InMemoryStateStore;
+namespace Tests\Unit\Resilience;
 
-describe('InMemoryStateStore', function () {
-    it('starts with circuit closed', function () {
+use JOOservices\Client\Resilience\Storage\InMemoryStateStore;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
+
+#[Group('unit')]
+class InMemoryStateStoreTest extends TestCase
+{
+    public function test_starts_with_circuit_closed(): void
+    {
         $store = new InMemoryStateStore();
 
-        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
-        expect($store->isHalfOpen(5000))->toBeFalse();
-    });
+        $this->assertFalse($store->isCircuitOpen(3, 5000));
+        $this->assertFalse($store->isHalfOpen(5000));
+    }
 
-    it('records failures and opens circuit at threshold', function () {
+    public function test_records_failures_and_opens_circuit_at_threshold(): void
+    {
         $store = new InMemoryStateStore();
         $threshold = 2;
 
         $store->recordFailure();
-        expect($store->isCircuitOpen($threshold, 5000))->toBeFalse();
+        $this->assertFalse($store->isCircuitOpen($threshold, 5000));
 
         $store->recordFailure();
-        expect($store->isCircuitOpen($threshold, 5000))->toBeTrue();
-    });
+        $this->assertTrue($store->isCircuitOpen($threshold, 5000));
+    }
 
-    it('opens circuit after threshold reached', function () {
+    public function test_opens_circuit_after_threshold_reached(): void
+    {
         $store = new InMemoryStateStore();
         $threshold = 3;
         $recoveryTimeoutMs = 5000;
 
-        // Before threshold
         $store->recordFailure();
         $store->recordFailure();
-        expect($store->isCircuitOpen($threshold, $recoveryTimeoutMs))->toBeFalse();
+        $this->assertFalse($store->isCircuitOpen($threshold, $recoveryTimeoutMs));
 
-        // At threshold
         $store->recordFailure();
-        expect($store->isCircuitOpen($threshold, $recoveryTimeoutMs))->toBeTrue();
-    });
+        $this->assertTrue($store->isCircuitOpen($threshold, $recoveryTimeoutMs));
+    }
 
-    it('resets state completely', function () {
+    public function test_resets_state_completely(): void
+    {
         $store = new InMemoryStateStore();
 
-        // Open the circuit
         $store->recordFailure();
         $store->recordFailure();
         $store->recordFailure();
-        expect($store->isCircuitOpen(3, 5000))->toBeTrue();
+        $this->assertTrue($store->isCircuitOpen(3, 5000));
 
         $store->reset();
 
-        // Circuit should be closed after reset
-        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
-        expect($store->isHalfOpen(5000))->toBeFalse();
-    });
+        $this->assertFalse($store->isCircuitOpen(3, 5000));
+        $this->assertFalse($store->isHalfOpen(5000));
+    }
 
-    it('records success and resets failures when closed', function () {
+    public function test_records_success_and_resets_failures_when_closed(): void
+    {
         $store = new InMemoryStateStore();
 
         $store->recordFailure();
         $store->recordFailure();
-        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
+        $this->assertFalse($store->isCircuitOpen(3, 5000));
 
         $store->recordSuccess();
 
-        // After success, should still be closed and not open even with more failures
         $store->recordFailure();
-        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
-    });
+        $this->assertFalse($store->isCircuitOpen(3, 5000));
+    }
 
-    it('detects half-open state after recovery timeout', function () {
+    public function test_detects_half_open_state_after_recovery_timeout(): void
+    {
         $store = new InMemoryStateStore();
         $threshold = 1;
-        $recoveryTimeoutMs = 100; // 100ms for testing
+        $recoveryTimeoutMs = 100;
 
-        // Open the circuit
         $store->recordFailure();
-        expect($store->isCircuitOpen($threshold, $recoveryTimeoutMs))->toBeTrue();
-        expect($store->isHalfOpen($recoveryTimeoutMs))->toBeFalse();
+        $this->assertTrue($store->isCircuitOpen($threshold, $recoveryTimeoutMs));
+        $this->assertFalse($store->isHalfOpen($recoveryTimeoutMs));
 
-        // Wait for recovery timeout
-        usleep(150 * 1000); // 150ms
+        usleep(150 * 1000);
 
-        expect($store->isHalfOpen($recoveryTimeoutMs))->toBeTrue();
-    });
+        $this->assertTrue($store->isHalfOpen($recoveryTimeoutMs));
+    }
 
-    it('tracks half-open successes', function () {
+    public function test_tracks_half_open_successes(): void
+    {
         $store = new InMemoryStateStore();
 
-        // Open circuit first
         $store->recordFailure();
         $store->isCircuitOpen(1, 100);
 
-        // Wait for half-open
         usleep(150 * 1000);
 
         $store->reportSuccessInHalfOpen();
         $store->reportSuccessInHalfOpen();
 
-        expect($store->checkHalfOpenRecovery(2))->toBeTrue();
-        expect($store->checkHalfOpenRecovery(3))->toBeFalse();
-    });
+        $this->assertTrue($store->checkHalfOpenRecovery(2));
+        $this->assertFalse($store->checkHalfOpenRecovery(3));
+    }
 
-    it('resets half-open successes on failure', function () {
+    public function test_resets_half_open_successes_on_failure(): void
+    {
         $store = new InMemoryStateStore();
 
-        // Open circuit
         $store->recordFailure();
         $store->isCircuitOpen(1, 100);
         usleep(150 * 1000);
 
-        // Some successes in half-open
         $store->reportSuccessInHalfOpen();
-        expect($store->checkHalfOpenRecovery(1))->toBeTrue();
+        $this->assertTrue($store->checkHalfOpenRecovery(1));
 
-        // Failure resets
         $store->recordFailure();
-        expect($store->checkHalfOpenRecovery(1))->toBeFalse();
-    });
-});
+        $this->assertFalse($store->checkHalfOpenRecovery(1));
+    }
+
+    public function test_record_failure_reopens_circuit_when_in_half_open(): void
+    {
+        $store = new InMemoryStateStore();
+        $store->recordFailure();
+        $this->assertTrue($store->isCircuitOpen(1, 100));
+
+        usleep(150 * 1000);
+        $this->assertTrue($store->isHalfOpen(100));
+
+        $store->recordFailure();
+        $this->assertTrue($store->isCircuitOpen(1, 100));
+    }
+}

@@ -31,7 +31,7 @@ jobs:
         run: vendor/bin/pint --test
 
       - name: Static Analysis (PHPStan)
-        run: vendor/bin/phpstan analyse --no-progress
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=512M
 
       - name: Mess Detector (PHPMD)
         run: vendor/bin/phpmd src text phpmd.xml
@@ -39,11 +39,5 @@ jobs:
       - name: Code Sniffer (PHPCS)
         run: vendor/bin/phpcs src tests
 
-      - name: Architecture Tests (Pest Arch)
-        run: vendor/bin/pest --group=arch
-
-      - name: Unit Tests
-        run: vendor/bin/pest --group=unit --coverage-clover coverage.xml
-
-      - name: Integration Tests
-        run: vendor/bin/pest --group=integration
+      - name: Run tests (PHPUnit + coverage gate)
+        run: composer test

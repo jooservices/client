@@ -309,6 +309,10 @@ $client = ClientBuilder::create()
 - URI
 - Status code
 - Duration
+- local_ip
+- target_ip
+- target_hostname
+- wan_ip
 - Headers (redacted sensitive ones)
 - Body (if enabled)
 
@@ -547,7 +551,7 @@ $client = ClientBuilder::create()
 
 **Coverage**: Confirmed 100% core coverage per README
 
-**Framework**: Pest 4.0
+**Framework**: PHPUnit 12
 
 **Status**: ✅ Confirmed
 

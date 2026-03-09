@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Tests\Feature\Middleware;
+
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
@@ -10,13 +12,17 @@ use JOOservices\Client\Client\ClientBuilder;
 use JOOservices\Client\Resilience\CircuitBreakerConfig;
 use JOOservices\Client\Resilience\RetryConfig;
 use JOOservices\Client\Resilience\Storage\InMemoryStateStore;
+use PHPUnit\Framework\Attributes\Group;
 use Psr\Log\NullLogger;
+use Tests\TestCase;
 
-describe('Middleware Ordering Interactions', function () {
-    it('cache middleware prevents retry on cache hit', function () {
+#[Group('feature')]
+class MiddlewareOrderingTest extends TestCase
+{
+    public function test_cache_middleware_prevents_retry_on_cache_hit(): void
+    {
         $mock = new MockHandler([
             new Response(200, [], '{"cached": "data"}'),
-            // If retry happens, this 500 would be attempted
             new Response(500, [], '{"error": "should not reach"}'),
         ]);
         $handler = HandlerStack::create($mock);
@@ -29,22 +35,17 @@ describe('Middleware Ordering Interactions', function () {
             ->withRetry(new RetryConfig(maxAttempts: 3, retryableStatuses: [500]))
             ->build();
 
-        // First request - should hit API and cache
         $response1 = $client->get('/data');
-        expect($response1->json())->toBe(['cached' => 'data']);
+        $this->assertSame(['cached' => 'data'], $response1->json());
 
-        // Second request - should hit cache and NOT trigger retry on 500
         $response2 = $client->get('/data');
-        expect($response2->json())->toBe(['cached' => 'data']);
+        $this->assertSame(['cached' => 'data'], $response2->json());
+        $this->assertSame(200, $response2->status());
+    }
 
-        // If retry was triggered, we'd get the 500 error
-        expect($response2->status())->toBe(200);
-    });
-
-    it('circuit breaker prevents retry when circuit is open', function () {
-        $callCount = 0;
+    public function test_circuit_breaker_prevents_retry_when_circuit_is_open(): void
+    {
         $mock = new MockHandler([
-            // First 5 requests fail to open circuit
             new Response(503, [], '{"error": "service unavailable"}'),
             new Response(503, [], '{"error": "service unavailable"}'),
             new Response(503, [], '{"error": "service unavailable"}'),
@@ -66,21 +67,20 @@ describe('Middleware Ordering Interactions', function () {
             ->withRetry(new RetryConfig(maxAttempts: 2, retryableStatuses: [503]))
             ->build();
 
-        // Trigger failures to open circuit
         for ($i = 0; $i < 5; $i++) {
             try {
                 $client->get('/api');
             } catch (\Throwable $e) {
-                // Expected to fail
             }
         }
 
-        // Circuit should now be open
-        expect(fn () => $client->get('/api'))
-            ->toThrow(\JOOservices\Client\Exceptions\NetworkConnectionException::class, 'Circuit Breaker is OPEN');
-    });
+        $this->expectException(\JOOservices\Client\Exceptions\NetworkConnectionException::class);
+        $this->expectExceptionMessage('Circuit Breaker is OPEN');
+        $client->get('/api');
+    }
 
-    it('logging middleware captures request and response from retry attempts', function () {
+    public function test_logging_middleware_captures_request_and_response_from_retry_attempts(): void
+    {
         $mock = new MockHandler([
             new Response(503, [], '{"error": "temporary"}'),
             new Response(200, [], '{"success": true}'),
@@ -113,11 +113,12 @@ describe('Middleware Ordering Interactions', function () {
 
         $response = $client->get('/test');
 
-        expect($response->status())->toBe(200);
-        expect($logs)->toHaveCount(2); // One for initial request, one for successful retry
-    });
+        $this->assertSame(200, $response->status());
+        $this->assertCount(2, $logs);
+    }
 
-    it('interceptor middleware can modify requests before cache lookup', function () {
+    public function test_interceptor_middleware_can_modify_requests_before_cache_lookup(): void
+    {
         $mock = new MockHandler([
             new Response(200, ['X-Custom' => 'modified'], '{"intercepted": true}'),
         ]);
@@ -138,11 +139,12 @@ describe('Middleware Ordering Interactions', function () {
 
         $response = $client->get('/test');
 
-        expect($requestModified)->toBeTrue();
-        expect($response->header('X-Custom'))->toBe('modified');
-    });
+        $this->assertTrue($requestModified);
+        $this->assertSame('modified', $response->header('X-Custom'));
+    }
 
-    it('correlation ID is propagated through all middleware', function () {
+    public function test_correlation_ID_is_propagated_through_all_middleware(): void
+    {
         $mock = new MockHandler([
             new Response(200, [], '{"data": "test"}'),
         ]);
@@ -162,14 +164,16 @@ describe('Middleware Ordering Interactions', function () {
 
         $client->get('/test');
 
-        expect($capturedRequest)->not->toBeNull();
-        expect($capturedRequest->hasHeader('X-Correlation-ID'))->toBeTrue();
+        $this->assertNotNull($capturedRequest);
+        $this->assertTrue($capturedRequest->hasHeader('X-Correlation-ID'));
 
         $correlationId = $capturedRequest->getHeader('X-Correlation-ID')[0];
-        expect($correlationId)->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i');
-    });
+        $uuidRegex = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
+        $this->assertMatchesRegularExpression($uuidRegex, $correlationId);
+    }
 
-    it('middleware stack executes in correct order with all features enabled', function () {
+    public function test_middleware_stack_executes_in_correct_order_with_all_features_enabled(): void
+    {
         $executionOrder = [];
 
         $mock = new MockHandler([
@@ -201,12 +205,13 @@ describe('Middleware Ordering Interactions', function () {
 
         $response = $client->get('/test');
 
-        expect($response->status())->toBe(200);
-        expect($executionOrder)->toContain('interceptor-request');
-        expect($executionOrder)->toContain('interceptor-response');
-    });
+        $this->assertSame(200, $response->status());
+        $this->assertContains('interceptor-request', $executionOrder);
+        $this->assertContains('interceptor-response', $executionOrder);
+    }
 
-    it('user-agent middleware sets default header when none provided', function () {
+    public function test_user_agent_middleware_sets_default_header_when_none_provided(): void
+    {
         $mock = new MockHandler([
             new Response(200, [], '{"success": true}'),
         ]);
@@ -226,12 +231,12 @@ describe('Middleware Ordering Interactions', function () {
 
         $client->get('/test');
 
-        expect($capturedRequest->hasHeader('User-Agent'))->toBeTrue();
-        expect($capturedRequest->getHeader('User-Agent')[0])->toBe('CustomClient/2.0');
-    });
+        $this->assertTrue($capturedRequest->hasHeader('User-Agent'));
+        $this->assertSame('CustomClient/2.0', $capturedRequest->getHeader('User-Agent')[0]);
+    }
 
-    it('cache respects TTL and expires correctly with retry middleware', function () {
-        $callCount = 0;
+    public function test_cache_respects_TTL_and_expires_correctly_with_retry_middleware(): void
+    {
         $mock = new MockHandler([
             new Response(200, [], '{"call": 1}'),
             new Response(200, [], '{"call": 2}'),
@@ -243,23 +248,19 @@ describe('Middleware Ordering Interactions', function () {
         $client = ClientBuilder::create()
             ->withBaseUri('https://api.example.com')
             ->withOption('handler', $handler)
-            ->withCache($cache, 1) // 1 second TTL
+            ->withCache($cache, 1)
             ->withRetry(new RetryConfig())
             ->build();
 
-        // First call
         $response1 = $client->get('/test');
-        expect($response1->json())->toBe(['call' => 1]);
+        $this->assertSame(['call' => 1], $response1->json());
 
-        // Second call immediately - should hit cache
         $response2 = $client->get('/test');
-        expect($response2->json())->toBe(['call' => 1]);
+        $this->assertSame(['call' => 1], $response2->json());
 
-        // Wait for cache to expire
         sleep(2);
 
-        // Third call - cache expired, should make new request
         $response3 = $client->get('/test');
-        expect($response3->json())->toBe(['call' => 2]);
-    });
-});
+        $this->assertSame(['call' => 2], $response3->json());
+    }
+}

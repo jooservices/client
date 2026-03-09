@@ -2,76 +2,112 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Response;
+
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Exceptions\JsonDecodingException;
 use JOOservices\Client\Response\ResponseWrapper;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-test('it returns status code', function () {
-    $psr = new Response(201);
-    $wrapper = new ResponseWrapper($psr);
-    expect($wrapper->status())->toBe(201);
-});
+#[Group('unit')]
+class ResponseWrapperTest extends TestCase
+{
+    public function test_it_returns_status_code(): void
+    {
+        $psr = new Response(201);
+        $wrapper = new ResponseWrapper($psr);
+        $this->assertSame(201, $wrapper->status());
+    }
 
-test('it decodes json', function () {
-    $psr = new Response(200, [], json_encode(['foo' => 'bar']));
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_decodes_json(): void
+    {
+        $psr = new Response(200, [], json_encode(['foo' => 'bar']));
+        $wrapper = new ResponseWrapper($psr);
 
-    expect($wrapper->json())->toBe(['foo' => 'bar']);
-});
+        $this->assertSame(['foo' => 'bar'], $wrapper->json());
+    }
 
-test('it returns empty array for empty body', function () {
-    $psr = new Response(200, [], '');
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_returns_empty_array_for_empty_body(): void
+    {
+        $psr = new Response(200, [], '');
+        $wrapper = new ResponseWrapper($psr);
 
-    expect($wrapper->json())->toBe([]);
-});
+        $this->assertSame([], $wrapper->json());
+    }
 
-test('it throws exception on invalid json', function () {
-    $psr = new Response(200, [], '{invalid_json');
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_throws_exception_on_invalid_json(): void
+    {
+        $psr = new Response(200, [], '{invalid_json');
+        $wrapper = new ResponseWrapper($psr);
 
-    $wrapper->json();
-})->throws(JsonDecodingException::class);
+        $this->expectException(JsonDecodingException::class);
+        $wrapper->json();
+    }
 
-test('it returns header value', function () {
-    $psr = new Response(200, ['Content-Type' => 'application/json']);
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_returns_header_value(): void
+    {
+        $psr = new Response(200, ['Content-Type' => 'application/json']);
+        $wrapper = new ResponseWrapper($psr);
 
-    expect($wrapper->header('Content-Type'))->toBe('application/json');
-});
+        $this->assertSame('application/json', $wrapper->header('Content-Type'));
+    }
 
-test('it returns null for missing header', function () {
-    $psr = new Response(200);
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_returns_null_for_missing_header(): void
+    {
+        $psr = new Response(200);
+        $wrapper = new ResponseWrapper($psr);
 
-    expect($wrapper->header('X-Missing-Header'))->toBeNull();
-});
+        $this->assertNull($wrapper->header('X-Missing-Header'));
+    }
 
-test('it returns psr response', function () {
-    $psr = new Response(200, [], 'body');
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_returns_psr_response(): void
+    {
+        $psr = new Response(200, [], 'body');
+        $wrapper = new ResponseWrapper($psr);
 
-    expect($wrapper->toPsrResponse())->toBe($psr);
-});
+        $this->assertSame($psr, $wrapper->toPsrResponse());
+    }
 
-test('it throws exception when toDto class does not exist', function () {
-    $psr = new Response(200, [], '{}');
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_throws_exception_when_toDto_class_does_not_exist(): void
+    {
+        $psr = new Response(200, [], '{}');
+        $wrapper = new ResponseWrapper($psr);
 
-    $wrapper->toDto('NonExistentClass');
-})->throws(\InvalidArgumentException::class, 'does not exist');
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('does not exist');
+        $wrapper->toDto('NonExistentClass');
+    }
 
-test('it throws exception when toDto class lacks from method', function () {
-    $psr = new Response(200, [], '{}');
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_throws_exception_when_toDto_class_lacks_from_method(): void
+    {
+        $psr = new Response(200, [], '{}');
+        $wrapper = new ResponseWrapper($psr);
 
-    // stdClass exists but has no from() method
-    $wrapper->toDto(\stdClass::class);
-})->throws(\InvalidArgumentException::class, 'must have a static from() method');
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('must have a static from() method');
+        $wrapper->toDto(\stdClass::class);
+    }
 
-test('it throws exception when json is not array', function () {
-    $psr = new Response(200, [], '"just a string"');
-    $wrapper = new ResponseWrapper($psr);
+    public function test_it_throws_exception_when_json_is_not_array(): void
+    {
+        $psr = new Response(200, [], '"just a string"');
+        $wrapper = new ResponseWrapper($psr);
 
-    $wrapper->json();
-})->throws(JsonDecodingException::class, 'not an array');
+        $this->expectException(JsonDecodingException::class);
+        $this->expectExceptionMessage('not an array');
+        $wrapper->json();
+    }
+
+    public function test_toDto_returns_dto_from_json(): void
+    {
+        $psr = new Response(200, [], json_encode(['id' => 1, 'name' => 'Test']));
+        $wrapper = new ResponseWrapper($psr);
+
+        $dto = $wrapper->toDto(ResponseWrapperTestDto::class);
+
+        $this->assertInstanceOf(ResponseWrapperTestDto::class, $dto);
+        $this->assertSame(1, $dto->id);
+        $this->assertSame('Test', $dto->name);
+    }
+}

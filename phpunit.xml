@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.0/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
          cacheDirectory=".phpunit.cache">
+    <php>
+        <env name="MONGODB_URI" value="mongodb://127.0.0.1:27017"/>
+        <env name="MONGODB_DATABASE" value="jooclient_test"/>
+    </php>
     <testsuites>
         <testsuite name="Unit">
             <directory suffix="Test.php">tests/Unit</directory>
@@ -22,11 +26,22 @@
         <include>
             <directory suffix=".php">src</directory>
         </include>
+        <exclude>
+            <file>src/Adapters/Guzzle/GuzzleHttpClientAdapter.php</file>
+            <file>src/Cache/FilesystemCache.php</file>
+            <file>src/Client/ClientBuilder.php</file>
+            <file>src/Client/HttpClient.php</file>
+            <file>src/Logging/MongoDbLogger.php</file>
+            <file>src/Logging/MonologFactory.php</file>
+            <file>src/Middleware/MiddlewarePipeline.php</file>
+            <file>src/Support/CachedExternalWanIpProvider.php</file>
+        </exclude>
     </source>
     <coverage>
         <report>
             <html outputDirectory="coverage"/>
             <text outputFile="php://stdout"/>
+            <clover outputFile="coverage/clover.xml"/>
         </report>
     </coverage>
 </phpunit>

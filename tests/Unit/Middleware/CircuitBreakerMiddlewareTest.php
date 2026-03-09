@@ -2,15 +2,22 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Middleware;
+
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Exceptions\NetworkConnectionException;
 use JOOservices\Client\Middleware\CircuitBreakerMiddleware;
 use JOOservices\Client\Resilience\CircuitBreakerConfig;
 use JOOservices\Client\Resilience\Storage\InMemoryStateStore;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-describe('CircuitBreakerMiddleware', function () {
-    it('allows request when circuit is closed', function () {
+#[Group('unit')]
+class CircuitBreakerMiddlewareTest extends TestCase
+{
+    public function test_allows_request_when_circuit_is_closed(): void
+    {
         $config = new CircuitBreakerConfig(failureThreshold: 3, recoveryTimeoutMs: 5000);
         $store = new InMemoryStateStore();
         $middleware = new CircuitBreakerMiddleware($config, $store);
@@ -20,18 +27,17 @@ describe('CircuitBreakerMiddleware', function () {
 
         $response = $middleware($request, [], $next);
 
-        expect($response->getStatusCode())->toBe(200);
-    });
+        $this->assertSame(200, $response->getStatusCode());
+    }
 
-    it('records success and resets failures', function () {
+    public function test_records_success_and_resets_failures(): void
+    {
         $config = new CircuitBreakerConfig(failureThreshold: 3, recoveryTimeoutMs: 5000);
         $store = new InMemoryStateStore();
 
-        // Record some failures first
         $store->recordFailure();
         $store->recordFailure();
-        // Circuit should not be open yet (threshold is 3)
-        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
+        $this->assertFalse($store->isCircuitOpen(3, 5000));
 
         $middleware = new CircuitBreakerMiddleware($config, $store);
         $request = new Request('GET', 'https://example.com/api');
@@ -39,11 +45,11 @@ describe('CircuitBreakerMiddleware', function () {
 
         $middleware($request, [], $next);
 
-        // After success, circuit should still be closed
-        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
-    });
+        $this->assertFalse($store->isCircuitOpen(3, 5000));
+    }
 
-    it('records failure and rethrows exception', function () {
+    public function test_records_failure_and_rethrows_exception(): void
+    {
         $config = new CircuitBreakerConfig(failureThreshold: 3, recoveryTimeoutMs: 5000);
         $store = new InMemoryStateStore();
         $middleware = new CircuitBreakerMiddleware($config, $store);
@@ -51,14 +57,16 @@ describe('CircuitBreakerMiddleware', function () {
         $request = new Request('GET', 'https://example.com/api');
         $next = fn ($req, $opts) => throw new \RuntimeException('Server error');
 
-        expect(fn () => $middleware($request, [], $next))
-            ->toThrow(\RuntimeException::class);
+        try {
+            $middleware($request, [], $next);
+            $this->fail('Expected RuntimeException');
+        } catch (\RuntimeException) {
+            $this->assertFalse($store->isCircuitOpen(3, 5000));
+        }
+    }
 
-        // After one failure, circuit should not be open yet
-        expect($store->isCircuitOpen(3, 5000))->toBeFalse();
-    });
-
-    it('opens circuit after reaching failure threshold', function () {
+    public function test_opens_circuit_after_reaching_failure_threshold(): void
+    {
         $config = new CircuitBreakerConfig(failureThreshold: 2, recoveryTimeoutMs: 5000);
         $store = new InMemoryStateStore();
         $middleware = new CircuitBreakerMiddleware($config, $store);
@@ -66,31 +74,29 @@ describe('CircuitBreakerMiddleware', function () {
         $request = new Request('GET', 'https://example.com/api');
         $next = fn ($req, $opts) => throw new \RuntimeException('Server error');
 
-        // First failure
         try {
             $middleware($request, [], $next);
         } catch (\Throwable) {
         }
 
-        // Second failure - opens circuit
         try {
             $middleware($request, [], $next);
         } catch (\Throwable) {
         }
 
-        // Third call - circuit should be open
-        expect(fn () => $middleware($request, [], $next))
-            ->toThrow(NetworkConnectionException::class, 'Circuit Breaker is OPEN');
-    });
+        $this->expectException(NetworkConnectionException::class);
+        $this->expectExceptionMessage('Circuit Breaker is OPEN');
+        $middleware($request, [], $next);
+    }
 
-    it('allows request in half-open state after recovery timeout', function () {
+    public function test_allows_request_in_half_open_state_after_recovery_timeout(): void
+    {
         $config = new CircuitBreakerConfig(failureThreshold: 2, recoveryTimeoutMs: 100);
         $store = new InMemoryStateStore();
         $middleware = new CircuitBreakerMiddleware($config, $store);
 
         $request = new Request('GET', 'https://example.com/api');
 
-        // Get 2 failures to reach threshold
         try {
             $middleware($request, [], fn ($req, $opts) => throw new \RuntimeException('fail'));
         } catch (\Throwable) {
@@ -100,27 +106,28 @@ describe('CircuitBreakerMiddleware', function () {
         } catch (\Throwable) {
         }
 
-        // Verify circuit is open
-        expect(fn () => $middleware($request, [], fn ($req, $opts) => new Response(200)))
-            ->toThrow(NetworkConnectionException::class);
+        try {
+            $middleware($request, [], fn ($req, $opts) => new Response(200));
+            $this->fail('Expected NetworkConnectionException');
+        } catch (NetworkConnectionException $e) {
+            // expected
+        }
 
-        // Wait for recovery timeout
-        usleep(150 * 1000); // 150ms
+        usleep(150 * 1000);
 
-        // Should allow request in half-open state
         $response = $middleware($request, [], fn ($req, $opts) => new Response(200));
 
-        expect($response->getStatusCode())->toBe(200);
-    });
+        $this->assertSame(200, $response->getStatusCode());
+    }
 
-    it('handles successful response in half-open state', function () {
+    public function test_handles_successful_response_in_half_open_state(): void
+    {
         $config = new CircuitBreakerConfig(failureThreshold: 2, recoveryTimeoutMs: 100);
         $store = new InMemoryStateStore();
         $middleware = new CircuitBreakerMiddleware($config, $store);
 
         $request = new Request('GET', 'https://example.com/api');
 
-        // Get failures to reach threshold and open circuit
         try {
             $middleware($request, [], fn ($req, $opts) => throw new \RuntimeException('fail'));
         } catch (\Throwable) {
@@ -130,19 +137,49 @@ describe('CircuitBreakerMiddleware', function () {
         } catch (\Throwable) {
         }
 
-        // Trigger circuit open detection
         try {
             $middleware($request, [], fn ($req, $opts) => new Response(200));
         } catch (\Throwable) {
         }
 
-        // Wait for half-open
         usleep(150 * 1000);
 
-        // Success in half-open should return response (and call recordSuccess internally)
         $response = $middleware($request, [], fn ($req, $opts) => new Response(200));
 
-        // Verify the request succeeded
-        expect($response->getStatusCode())->toBe(200);
-    });
-});
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
+    public function test_half_open_recovery_resets_circuit_after_success_threshold(): void
+    {
+        $config = new CircuitBreakerConfig(
+            failureThreshold: 2,
+            recoveryTimeoutMs: 50,
+            successThreshold: 2
+        );
+        $store = new InMemoryStateStore();
+        $middleware = new CircuitBreakerMiddleware($config, $store);
+        $request = new Request('GET', 'https://example.com/api');
+
+        try {
+            $middleware($request, [], fn ($req, $opts) => throw new \RuntimeException('fail'));
+        } catch (\Throwable) {
+        }
+        try {
+            $middleware($request, [], fn ($req, $opts) => throw new \RuntimeException('fail'));
+        } catch (\Throwable) {
+        }
+        try {
+            $middleware($request, [], fn ($req, $opts) => throw new \RuntimeException('open'));
+        } catch (NetworkConnectionException $e) {
+            $this->assertSame('Circuit Breaker is OPEN', $e->getMessage());
+        }
+
+        usleep(100 * 1000);
+
+        $middleware($request, [], fn ($req, $opts) => new Response(200));
+        $response = $middleware($request, [], fn ($req, $opts) => new Response(200));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertFalse($store->isCircuitOpen(2, 50));
+    }
+}
