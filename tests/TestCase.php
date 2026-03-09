@@ -7,32 +7,13 @@ namespace Tests;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
-use MongoDB\Laravel\MongoDBServiceProvider;
-use Orchestra\Testbench\TestCase as BaseTestCase;
+use PHPUnit\Framework\TestCase as BaseTestCase;
 use Psr\Http\Message\RequestInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 
 abstract class TestCase extends BaseTestCase
 {
-    /**
-     * Load package config so DB connection is env-driven (config/database.php).
-     */
-    protected function getEnvironmentSetUp($app): void
-    {
-        $dbConfig = require dirname(__DIR__) . '/config/database.php';
-        $app['config']->set('database.default', $dbConfig['default']);
-        $app['config']->set('database.connections.mongodb', $dbConfig['connections']['mongodb']);
-    }
-
-    /**
-     * @return array<int, class-string>
-     */
-    protected function getPackageProviders($app): array
-    {
-        return [MongoDBServiceProvider::class];
-    }
-
     protected static function getTmpDir(): string
     {
         return __DIR__ . '/tmp';
