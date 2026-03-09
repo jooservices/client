@@ -57,10 +57,12 @@ class CircuitBreakerMiddlewareTest extends TestCase
         $request = new Request('GET', 'https://example.com/api');
         $next = fn ($req, $opts) => throw new \RuntimeException('Server error');
 
-        $this->expectException(\RuntimeException::class);
-        $middleware($request, [], $next);
-
-        $this->assertFalse($store->isCircuitOpen(3, 5000));
+        try {
+            $middleware($request, [], $next);
+            $this->fail('Expected RuntimeException');
+        } catch (\RuntimeException) {
+            $this->assertFalse($store->isCircuitOpen(3, 5000));
+        }
     }
 
     public function test_opens_circuit_after_reaching_failure_threshold(): void

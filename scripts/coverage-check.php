@@ -8,7 +8,11 @@ declare(strict_types=1);
  * Run after: vendor/bin/phpunit (which generates coverage/clover.xml).
  */
 $cloverPath = dirname(__DIR__) . '/coverage/clover.xml';
-$minimumPercent = (float) ($argv[1] ?? '98');
+$raw = $argv[1] ?? '98';
+$minimumPercent = is_numeric($raw) ? (float) $raw : 98.0;
+if ($minimumPercent < 0 || $minimumPercent > 100) {
+    $minimumPercent = 98.0;
+}
 
 if (!is_file($cloverPath)) {
     fwrite(STDERR, "Coverage file not found: {$cloverPath}. Run phpunit with coverage first.\n");

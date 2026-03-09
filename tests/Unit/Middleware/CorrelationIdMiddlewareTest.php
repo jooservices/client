@@ -49,13 +49,16 @@ class CorrelationIdMiddlewareTest extends TestCase
         $middleware = new CorrelationIdMiddleware();
         $request = new Request('GET', 'https://example.com/api');
 
-        $next = function ($req, $opts) {
+        $requestId = null;
+        $next = function ($req, $opts) use (&$requestId) {
+            $requestId = $req->getHeaderLine('X-Correlation-ID');
             return new Response(200);
         };
 
         $response = $middleware($request, [], $next);
 
-        $this->assertTrue($response->hasHeader('X-Correlation-ID'));
+        $this->assertNotEmpty($requestId);
+        $this->assertSame($requestId, $response->getHeaderLine('X-Correlation-ID'));
     }
 
     public function test_uses_custom_header_name_from_options(): void

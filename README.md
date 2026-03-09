@@ -113,7 +113,7 @@ If PHP is not installed locally, run everything in Docker.
 ```bash
 docker compose up -d --build mongodb
 docker compose run --rm php composer install
-docker compose run --rm php vendor/bin/phpunit
+docker compose run --rm php composer test
 ```
 
 For live network integration tests (real sites), run:
@@ -124,9 +124,9 @@ docker compose run --rm -e JOOCLIENT_RUN_LIVE_NETWORK_TESTS=1 php \
 ```
 
 This test hits:
-- `https://onejav.com`
+- `https://httpbin.org/get`
+- `https://example.com`
 - `https://google.com`
-- `https://microsoft.com`
 
 ## Contributing
 

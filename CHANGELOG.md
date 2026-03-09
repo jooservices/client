@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-03-10
 
 ### Added
+- **Logging**: Automatic IP metadata in request logs (`local_ip`, `target_ip`, `target_hostname`, `wan_ip`) when logging is enabled via `ClientBuilder::withLogger()`.
 - **Quality**: Coverage gate script (`scripts/coverage-check.php`) enforcing 98% minimum coverage in CI.
 - **Tests**: PHPUnit test groups (`unit`, `integration`, `arch`, `feature`) for targeted test runs.
 

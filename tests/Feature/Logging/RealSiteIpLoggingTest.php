@@ -38,9 +38,9 @@ class RealSiteIpLoggingTest extends TestCase
             ->build();
 
         $targets = [
-            'https://onejav.com',
+            'https://httpbin.org/get',
+            'https://example.com',
             'https://google.com',
-            'https://microsoft.com',
         ];
 
         foreach ($targets as $target) {

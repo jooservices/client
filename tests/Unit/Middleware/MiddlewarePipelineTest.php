@@ -58,9 +58,10 @@ class MiddlewarePipelineTest extends TestCase
 
         $stack->resolve()(new \GuzzleHttp\Psr7\Request('GET', '/'), [])->wait();
 
-        $this->assertNotEmpty($executionOrder);
-        $this->assertContains('m1_req', $executionOrder);
-        $this->assertContains('m2_req', $executionOrder);
-        $this->assertContains('handler', $executionOrder);
+        // Pipeline runs last-pushed first (LIFO): m2 wraps m1 wraps handler
+        $this->assertSame(
+            ['m2_req', 'm1_req', 'handler', 'm1_res', 'm2_res'],
+            $executionOrder
+        );
     }
 }
