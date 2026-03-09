@@ -14,3 +14,5 @@ coverage/
 logs/
 debug_monolog.php
 .phpcs-cache
+.docker-*.log
+.docker-*.exit
