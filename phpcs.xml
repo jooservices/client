@@ -11,4 +11,8 @@
     <file>tests</file>
 
     <rule ref="PSR12"/>
+    <!-- Allow test_* method names in tests (PHPUnit convention) -->
+    <rule ref="PSR1.Methods.CamelCapsMethodName">
+        <exclude-pattern>*/tests/*</exclude-pattern>
+    </rule>
 </ruleset>
