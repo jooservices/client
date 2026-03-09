@@ -139,14 +139,17 @@ class LoggingMiddleware implements MiddlewareInterface
 
         $baseUri = $options['base_uri'] ?? null;
         if ($baseUri !== null) {
-            $host = parse_url((string) $baseUri, PHP_URL_HOST);
+            $uriString = $baseUri instanceof \Psr\Http\Message\UriInterface
+                ? (string) $baseUri
+                : (is_string($baseUri) ? $baseUri : '');
+            $host = parse_url($uriString, PHP_URL_HOST);
             if (is_string($host) && $host !== '') {
                 return $host;
             }
         }
 
         if ($transferStats?->effectiveUri !== null) {
-            $host = parse_url((string) $transferStats->effectiveUri, PHP_URL_HOST);
+            $host = parse_url($transferStats->effectiveUri, PHP_URL_HOST);
             if (is_string($host) && $host !== '') {
                 return $host;
             }
