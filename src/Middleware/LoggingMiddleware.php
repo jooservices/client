@@ -36,14 +36,14 @@ class LoggingMiddleware implements MiddlewareInterface
         $method = $request->getMethod();
         $uri = (string) $request->getUri();
         $correlationId = $request->getHeaderLine(CorrelationIdMiddleware::HEADER_NAME);
-        $targetHostname = parse_url($uri, PHP_URL_HOST);
         $transferStats = $this->getTransferStatsBag($options);
+        $targetHostname = $this->resolveTargetHostname($uri, $options, $transferStats);
 
         $context = [
             'method' => $method,
             'uri' => $uri,
             'correlation_id' => $correlationId,
-            'target_hostname' => is_string($targetHostname) ? $targetHostname : null,
+            'target_hostname' => $targetHostname,
             'target_ip' => $transferStats?->targetIp,
             'local_ip' => $transferStats?->localIp,
         ];
@@ -73,6 +73,13 @@ class LoggingMiddleware implements MiddlewareInterface
             $transferStats = $this->getTransferStatsBag($options);
             $context['target_ip'] = $transferStats?->targetIp;
             $context['local_ip'] = $transferStats?->localIp;
+            if ($context['target_hostname'] === null && $transferStats?->effectiveUri !== null) {
+                $context['target_hostname'] = $this->resolveTargetHostname(
+                    (string) $transferStats->effectiveUri,
+                    $options,
+                    null
+                );
+            }
 
             $context['status'] = $statusCode;
             $context['duration_ms'] = $duration;
@@ -103,12 +110,49 @@ class LoggingMiddleware implements MiddlewareInterface
 
             $context['target_ip'] = $transferStats?->targetIp;
             $context['local_ip'] = $transferStats?->localIp;
+            if ($context['target_hostname'] === null && $transferStats?->effectiveUri !== null) {
+                $context['target_hostname'] = $this->resolveTargetHostname(
+                    (string) $transferStats->effectiveUri,
+                    $options,
+                    null
+                );
+            }
             $context['duration_ms'] = $duration;
             $context['exception'] = $e->getMessage();
 
             $this->logger->error("Exception for {$method} {$uri}: " . $e->getMessage(), $context);
             throw $e;
         }
+    }
+
+    /**
+     * Resolve target hostname from request URI, base_uri option, or transfer stats effectiveUri.
+     *
+     * @param array<string, mixed> $options
+     */
+    private function resolveTargetHostname(string $uri, array $options, ?TransferStatsBag $transferStats): ?string
+    {
+        $host = parse_url($uri, PHP_URL_HOST);
+        if (is_string($host) && $host !== '') {
+            return $host;
+        }
+
+        $baseUri = $options['base_uri'] ?? null;
+        if ($baseUri !== null) {
+            $host = parse_url((string) $baseUri, PHP_URL_HOST);
+            if (is_string($host) && $host !== '') {
+                return $host;
+            }
+        }
+
+        if ($transferStats?->effectiveUri !== null) {
+            $host = parse_url((string) $transferStats->effectiveUri, PHP_URL_HOST);
+            if (is_string($host) && $host !== '') {
+                return $host;
+            }
+        }
+
+        return null;
     }
 
     /**

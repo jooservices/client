@@ -338,16 +338,15 @@ final class MongoDbLogger implements LoggerInterface
     }
 
     /**
-     * Persist via Eloquent model only. Connection and collection come from model defaults (env-driven).
+     * Persist via Eloquent model. Uses this logger's connection and collection.
      *
      * @param array<string, mixed> $document
      */
     private function persistViaModel(array $document): void
     {
-        $attributes = $document;
-        if (isset($attributes['logged_at']) && $attributes['logged_at'] instanceof \DateTimeInterface) {
-            $attributes['logged_at'] = $attributes['logged_at']->format('Y-m-d H:i:s');
-        }
-        (new ClientRequestLog())->fill($attributes)->save();
+        $model = new ClientRequestLog();
+        $model->setConnection($this->connection);
+        $model->setTable($this->collection);
+        $model->fill($document)->save();
     }
 }

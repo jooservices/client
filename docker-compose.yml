@@ -7,8 +7,9 @@ services:
     volumes:
       - ./:/app
     environment:
-      JOOCLIENT_MONGO_URI: mongodb://mongodb:27017/?serverSelectionTimeoutMS=3000
-      JOOCLIENT_MONGO_DATABASE: jooclient_test
+      DB_CONNECTION: mongodb
+      MONGODB_URI: mongodb://mongodb:27017/?serverSelectionTimeoutMS=3000
+      MONGODB_DATABASE: jooclient_test
     depends_on:
       mongodb:
         condition: service_healthy

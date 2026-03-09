@@ -42,14 +42,17 @@ final class CachedExternalWanIpProvider implements WanIpProviderInterface
         try {
             $resolved = ($this->resolver)();
         } catch (Throwable) {
+            $this->cachedAt = $now;
             return $this->cachedIp;
         }
 
         if (!is_string($resolved) || $resolved === '') {
+            $this->cachedAt = $now;
             return $this->cachedIp;
         }
 
         if (filter_var($resolved, FILTER_VALIDATE_IP) === false) {
+            $this->cachedAt = $now;
             return $this->cachedIp;
         }
 
