@@ -80,9 +80,9 @@ Provide a production-ready HTTP client that solves common integration problems:
 
 **Modernize Legacy PHP Code**
 
-- PHP 8.2+ requirement enforces modern practices
+- PHP 8.5+ requirement enforces modern practices
 - Readonly properties, strict types, static analysis at level 9
-- Pest framework over PHPUnit
+- PHPUnit 12 for tests
 
 **Evidence**: PHP version requirement, TypeScript-like type strictness  
 **Confidence**: Inferred
@@ -228,7 +228,7 @@ If this were a commercial product, success would be measured by:
 
 **Modern PHP**:
 - PHP 8.5+ features (readonly, strict types)
-- Pest testing framework
+- PHPUnit 12 test suite
 
 **Evidence**: Feature comparison study would be needed  
 **Confidence**: Inferred from feature set

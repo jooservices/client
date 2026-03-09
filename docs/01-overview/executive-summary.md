@@ -92,7 +92,7 @@ $response = $client->get('/users/1');
 - **HTTP Client**: Guzzle 7.9+
 - **Logging**: Monolog 3.10+
 - **Caching**: PSR-16 Simple Cache
-- **Testing**: Pest 4.0+
+- **Testing**: PHPUnit 12
 - **Database**: MongoDB (optional, for logging)
 
 **Evidence**: `composer.json` dependencies

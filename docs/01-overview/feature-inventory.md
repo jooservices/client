@@ -551,7 +551,7 @@ $client = ClientBuilder::create()
 
 **Coverage**: Confirmed 100% core coverage per README
 
-**Framework**: Pest 4.0
+**Framework**: PHPUnit 12
 
 **Status**: ✅ Confirmed
 

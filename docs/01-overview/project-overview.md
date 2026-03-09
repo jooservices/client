@@ -14,13 +14,11 @@ Developers, architects, and technical contributors.
 
 **Name**: jooservices/client  
 **Type**: PHP Library (Composer package)  
-**Version**: 0.5.0 (composer.json) / 1.0.0 (CHANGELOG)  
+**Version**: 1.1.0  
 **License**: MIT  
 **PHP Requirement**: ^8.5  
 
 **Evidence**: `composer.json`
-
-**Risk (Medium)**: Version mismatch between `composer.json` (0.5.0) and CHANGELOG/README (1.0.0) needs resolution.
 
 ---
 
@@ -74,7 +72,7 @@ Developers, architects, and technical contributors.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| pestphp/pest | ^4.0 | Testing framework |
+| phpunit/phpunit | ^12.0 | Testing framework |
 | phpstan/phpstan | ^1.12 | Static analysis (level 9) |
 | laravel/pint | ^1.18 | Code style fixer (PSR-12) |
 | phpbench/phpbench | ^1.4 | Performance benchmarking |
@@ -290,19 +288,22 @@ Developers, architects, and technical contributors.
 
 ### Testing
 
-**Framework**: Pest 4.0  
-**Config**: `phpunit.xml`, `tests/Pest.php`  
+**Framework**: PHPUnit 12  
+**Config**: `phpunit.xml`, `tests/TestCase.php`  
 **Commands**:
-- `composer test`: Run all tests
+- `composer test`: Run all tests + coverage gate (98%)
 - `composer test:unit`: Unit tests only
 - `composer test:integration`: Integration tests
+- `composer test:arch`: Architecture tests
 
 **Test Organization**:
 - `tests/Unit/`: Isolated unit tests with mocks
-- `tests/Feature/`: Integration tests with real components
+- `tests/Feature/`: Feature/integration tests with real components
+- `tests/Integration/`: Integration tests
+- `tests/Arch/`: Architecture tests
 - `tests/Benchmark/`: Performance benchmarks (PHPBench)
 
-**Coverage**: 150 tests, 318 assertions (per recent test run)
+**Coverage**: Enforced via `scripts/coverage-check.php` (98% minimum).
 
 ### Code Style
 
@@ -335,7 +336,7 @@ Developers, architects, and technical contributors.
 1. Fix code style (`pint`)
 2. Run static analysis (`phpstan`)
 3. Check code style compliance (`phpcs`)
-4. Run test suite (`pest`)
+4. Run test suite (`phpunit`)
 
 **Evidence**: `composer.json` scripts section
 
@@ -386,7 +387,7 @@ Located in `scripts/`:
 **Changelog**: Maintained in `CHANGELOG.md` (Keep a Changelog format)  
 **Versioning**: Semantic Versioning 2.0.0
 
-**Risk (Medium)**: Version mismatch needs resolution before stable release
+**Version**: 1.1.0 (Semantic Versioning)
 
 ---
 

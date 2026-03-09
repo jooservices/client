@@ -36,7 +36,7 @@ Not all documentation can be stated with equal certainty. To maintain intellectu
 
 ✅ "The `HttpClient` class implements `HttpClientInterface` (see `src/Client/HttpClient.php` line 17)."
 
-✅ "Tests are written using Pest framework (`composer.json` dev dependencies)."
+✅ "Tests are written using PHPUnit (`composer.json` dev dependencies)."
 
 ---
 

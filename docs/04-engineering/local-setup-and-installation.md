@@ -14,13 +14,11 @@ PHP developers integrating the library into their projects.
 
 ### PHP Version
 
-**Required**: PHP 8.2 or higher
+**Required**: PHP 8.5 or higher
 
-**Evidence**: README badge shows "^8.2" minimum  
-**Composer**: `composer.json` specifies `^8.5` (discrepancy)  
-**Recommendation**: Clarify actual minimum version
+**Evidence**: `composer.json` specifies `^8.5`
 
-**Confidence**: Confirmed (files exist), Risk (version mismatch)
+**Confidence**: Confirmed
 
 ---
 
@@ -59,13 +57,13 @@ composer require jooservices/client
 
 **Expected Output**:
 ```
-Using version ^0.5 for jooservices/client
+Using version ^1.1 for jooservices/client
 ./composer.json has been updated
 Running composer update jooservices/client
 Loading composer repositories with package information
 Updating dependencies
 Lock file operations: 8 installs, 0 updates, 0 removals
-  - Locking jooservices/client (0.5.0)
+  - Locking jooservices/client (1.1.0)
   - Locking guzzlehttp/guzzle (7.9.x-dev)
   - Locking monolog/monolog (3.10.x-dev)
   ...
@@ -91,8 +89,8 @@ composer show jooservices/client
 **Expected Output**:
 ```
 name     : jooservices/client
-descrip. : A robust HTTP client with middleware support
-versions : * 0.5.0
+descrip. : A robust, layered HTTP Client wrapper for JOOservices
+versions : * 1.1.0
 type     : library
 ...
 ```
@@ -561,17 +559,17 @@ composer install
 ### Run Tests
 
 ```bash
-# All tests
+# All tests (includes 98% coverage gate)
 composer test
 
 # Unit tests only
-./vendor/bin/pest tests/Unit
+vendor/bin/phpunit --group=unit
 
 # Feature tests only
-./vendor/bin/pest tests/Feature
+vendor/bin/phpunit tests/Feature
 
-# With coverage
-composer test:coverage
+# Integration tests
+vendor/bin/phpunit --group=integration
 ```
 
 **Evidence**: `composer.json` scripts  
@@ -586,10 +584,10 @@ composer test:coverage
 composer quality
 
 # Individual tools
-composer stan      # PHPStan
+composer analyse   # PHPStan
 composer format    # Laravel Pint
-composer phpcs     # Code sniffer
-composer phpmd     # Mess detector
+composer check:cs  # PHPCS code sniffer
+composer fix:cs    # Pint fix
 ```
 
 **Evidence**: `composer.json` scripts  
@@ -627,7 +625,7 @@ COPY . .
 
 RUN composer install
 
-CMD ["./vendor/bin/pest"]
+CMD ["./vendor/bin/phpunit"]
 ```
 
 **Confidence**: Recommendation (no Docker setup found)

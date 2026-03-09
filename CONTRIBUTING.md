@@ -8,7 +8,7 @@ We adhere to strict coding standards to ensure high quality and maintainability.
 
 - **PSR-12**: Code style is enforced via [Laravel Pint](https://laravel.com/docs/pint).
 - **Static Analysis**: We use [PHPStan](https://phpstan.org/) at the highest level.
-- **Testing**: All features must be covered by tests using [Pest](https://pestphp.com/).
+- **Testing**: All features must be covered by tests using [PHPUnit](https://phpunit.de/) (PHPUnit 12).
 
 ## Workflow
 
@@ -24,7 +24,7 @@ We adhere to strict coding standards to ensure high quality and maintainability.
     This runs:
     - Pint (Linting)
     - PHPStan (Static Analysis)
-    - Pest (Tests)
+    - PHPUnit (Tests)
     - PHPBench (Performance)
 
 7.  **Commit**: Use descriptive commit messages.

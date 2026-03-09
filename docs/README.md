@@ -1,9 +1,9 @@
 # JOOClient Documentation
 
-Complete documentation for JOOClient - A robust, layered HTTP Client wrapper for PHP 8.2+.
+Complete documentation for JOOClient - A robust, layered HTTP Client wrapper for PHP 8.5+.
 
-> **Note**: Version 1.0.0 represents a complete rewrite focused on clean architecture and type safety. 
-> Previous documentation has been archived. This documentation reflects the current v1.0.0 codebase.
+> **Note**: Version 1.1.0 continues from the v1.0.0 rewrite (clean architecture, type safety). 
+> Tests run on PHPUnit 12; docs reflect the current codebase.
 
 ## 📚 Documentation Structure
 
