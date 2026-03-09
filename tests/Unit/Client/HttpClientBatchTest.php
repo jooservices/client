@@ -2,24 +2,29 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Client;
+
+use Exception;
 use GuzzleHttp\Promise\Promise;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Client\HttpClient;
 use JOOservices\Client\Contracts\TransportAdapterInterface;
 use JOOservices\Client\ValueObjects\ClientConfig;
+use Mockery;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-describe('HttpClient Batch', function () {
-    it('executes requests concurrently', function () {
+#[Group('unit')]
+class HttpClientBatchTest extends TestCase
+{
+    public function test_executes_requests_concurrently(): void
+    {
         $adapter = Mockery::mock(TransportAdapterInterface::class);
         $client = new HttpClient($adapter, new ClientConfig());
 
         $req1 = new Request('GET', 'http://a.com');
         $req2 = new Request('GET', 'http://b.com');
-
-        // We mocked using requestAsync logic in HttpClient which calls adapter->sendAsync
-        // But in our modified batch() we call requestAsync?
-        // Wait, in my modification I called requestAsync with headers from request.
 
         $adapter->shouldReceive('sendAsync')
             ->times(2)
@@ -31,10 +36,11 @@ describe('HttpClient Batch', function () {
 
         $results = $client->batch([$req1, $req2]);
 
-        expect($results)->toHaveCount(2);
-    });
+        $this->assertCount(2, $results);
+    }
 
-    it('respects keys in batch results', function () {
+    public function test_respects_keys_in_batch_results(): void
+    {
         $adapter = Mockery::mock(TransportAdapterInterface::class);
         $client = new HttpClient($adapter, new ClientConfig());
 
@@ -55,7 +61,7 @@ describe('HttpClient Batch', function () {
             throw new Exception('Results keys: ' . implode(', ', array_keys($results)));
         }
 
-        expect($results)->toHaveKey('foo');
-        expect($results)->toHaveKey('bar');
-    });
-});
+        $this->assertArrayHasKey('foo', $results);
+        $this->assertArrayHasKey('bar', $results);
+    }
+}

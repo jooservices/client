@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Adapters;
+
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Promise\Promise;
@@ -9,17 +11,20 @@ use GuzzleHttp\Psr7\Request;
 use JOOservices\Client\Adapters\Guzzle\GuzzleHttpClientAdapter;
 use JOOservices\Client\Exceptions\NetworkConnectionException;
 use JOOservices\Client\Exceptions\TimeoutException;
+use Mockery;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-describe('GuzzleHttpClientAdapter Async', function () {
-    it('wraps generic connect exception in promise', function () {
+#[Group('unit')]
+class GuzzleHttpClientAdapterAsyncTest extends TestCase
+{
+    public function test_wraps_generic_connect_exception_in_promise(): void
+    {
         $guzzle = Mockery::mock(ClientInterface::class);
         $adapter = new GuzzleHttpClientAdapter($guzzle);
 
         $request = new Request('GET', '/');
 
-        $promise = new Promise();
-        $promise->resolve(null); // Just to init
-        // We need a rejected promise
         $rejected = new Promise();
         $rejected->reject(new ConnectException('Connection refused', $request));
 
@@ -27,11 +32,12 @@ describe('GuzzleHttpClientAdapter Async', function () {
 
         $resultPromise = $adapter->sendAsync($request);
 
-        // Wait on it and expect exception
-        expect(fn () => $resultPromise->wait())->toThrow(NetworkConnectionException::class);
-    });
+        $this->expectException(NetworkConnectionException::class);
+        $resultPromise->wait();
+    }
 
-    it('wraps timeout exception in promise', function () {
+    public function test_wraps_timeout_exception_in_promise(): void
+    {
         $guzzle = Mockery::mock(ClientInterface::class);
         $adapter = new GuzzleHttpClientAdapter($guzzle);
 
@@ -43,6 +49,7 @@ describe('GuzzleHttpClientAdapter Async', function () {
 
         $resultPromise = $adapter->sendAsync($request);
 
-        expect(fn () => $resultPromise->wait())->toThrow(TimeoutException::class);
-    });
-});
+        $this->expectException(TimeoutException::class);
+        $resultPromise->wait();
+    }
+}

@@ -2,81 +2,85 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Cache;
+
 use JOOservices\Client\Cache\FilesystemCache;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-describe('FilesystemCache', function () {
-    // NOTE: Tests use TTL because there's a bug with isset() and null expiresAt
-    // The default high TTL (3600) ensures values don't expire during tests
-
-    it('creates directory if not exists', function () {
+#[Group('unit')]
+class FilesystemCacheTest extends TestCase
+{
+    public function test_creates_directory_if_not_exists(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
-        expect(is_dir($cacheDir))->toBeFalse();
+        $this->assertFalse(is_dir($cacheDir));
 
         new FilesystemCache($cacheDir);
 
-        expect(is_dir($cacheDir))->toBeTrue();
+        $this->assertTrue(is_dir($cacheDir));
 
-        // Cleanup
         rmdir($cacheDir);
-    });
+    }
 
-    it('returns default for non-existent key', function () {
+    public function test_returns_default_for_non_existent_key(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
-        expect($cache->get('non_existent'))->toBeNull();
-        expect($cache->get('non_existent', 'default'))->toBe('default');
+        $this->assertNull($cache->get('non_existent'));
+        $this->assertSame('default', $cache->get('non_existent', 'default'));
 
-        // Cleanup
         rmdir($cacheDir);
-    });
+    }
 
-    it('stores and retrieves values with TTL', function () {
+    public function test_stores_and_retrieves_values_with_TTL(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
         $result1 = $cache->set('key1', 'value1', 3600);
         $result2 = $cache->set('key2', ['array' => 'value'], 3600);
 
-        expect($result1)->toBeTrue();
-        expect($result2)->toBeTrue();
-        expect($cache->get('key1'))->toBe('value1');
-        expect($cache->get('key2'))->toBe(['array' => 'value']);
+        $this->assertTrue($result1);
+        $this->assertTrue($result2);
+        $this->assertSame('value1', $cache->get('key1'));
+        $this->assertSame(['array' => 'value'], $cache->get('key2'));
 
-        // Cleanup
         $cache->clear();
         rmdir($cacheDir);
-    });
+    }
 
-    it('deletes values', function () {
+    public function test_deletes_values(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
         $cache->set('key', 'value', 3600);
-        expect($cache->get('key'))->toBe('value');
+        $this->assertSame('value', $cache->get('key'));
 
         $result = $cache->delete('key');
 
-        expect($result)->toBeTrue();
-        expect($cache->get('key'))->toBeNull();
+        $this->assertTrue($result);
+        $this->assertNull($cache->get('key'));
 
-        // Cleanup
         rmdir($cacheDir);
-    });
+    }
 
-    it('returns true when deleting non-existent key', function () {
+    public function test_returns_true_when_deleting_non_existent_key(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
         $result = $cache->delete('non_existent');
 
-        expect($result)->toBeTrue();
+        $this->assertTrue($result);
 
-        // Cleanup
         rmdir($cacheDir);
-    });
+    }
 
-    it('clears all values', function () {
+    public function test_clears_all_values(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
@@ -85,64 +89,62 @@ describe('FilesystemCache', function () {
 
         $result = $cache->clear();
 
-        expect($result)->toBeTrue();
-        expect($cache->get('key1'))->toBeNull();
-        expect($cache->get('key2'))->toBeNull();
+        $this->assertTrue($result);
+        $this->assertNull($cache->get('key1'));
+        $this->assertNull($cache->get('key2'));
 
-        // Cleanup
         rmdir($cacheDir);
-    });
+    }
 
-    it('checks if key exists with has()', function () {
+    public function test_checks_if_key_exists_with_has(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
-        expect($cache->has('key'))->toBeFalse();
+        $this->assertFalse($cache->has('key'));
 
         $cache->set('key', 'value', 3600);
 
-        expect($cache->has('key'))->toBeTrue();
+        $this->assertTrue($cache->has('key'));
 
-        // Cleanup
         $cache->clear();
         rmdir($cacheDir);
-    });
+    }
 
-    it('respects TTL and expires cache', function () {
+    public function test_respects_TTL_and_expires_cache(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
-        // Set with 1 second TTL
         $cache->set('expiring_key', 'value', 1);
 
-        expect($cache->get('expiring_key'))->toBe('value');
+        $this->assertSame('value', $cache->get('expiring_key'));
 
-        // Wait for expiration
         sleep(2);
 
-        expect($cache->get('expiring_key'))->toBeNull();
+        $this->assertNull($cache->get('expiring_key'));
 
-        // Cleanup
         rmdir($cacheDir);
-    });
+    }
 
-    it('supports DateInterval TTL', function () {
+    public function test_supports_DateInterval_TTL(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
-        $cache->set('interval_key', 'value', new DateInterval('PT1S'));
+        $cache->set('interval_key', 'value', new \DateInterval('PT1S'));
 
-        expect($cache->get('interval_key'))->toBe('value');
+        $this->assertSame('value', $cache->get('interval_key'));
 
         sleep(2);
 
-        expect($cache->get('interval_key'))->toBeNull();
+        $this->assertNull($cache->get('interval_key'));
 
-        // Cleanup
         rmdir($cacheDir);
-    });
+    }
 
-    it('handles getMultiple with TTL', function () {
+    public function test_handles_getMultiple_with_TTL(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
@@ -151,18 +153,18 @@ describe('FilesystemCache', function () {
 
         $result = $cache->getMultiple(['key1', 'key2', 'key3'], 'default');
 
-        expect($result)->toBe([
+        $this->assertSame([
             'key1' => 'value1',
             'key2' => 'value2',
             'key3' => 'default',
-        ]);
+        ], $result);
 
-        // Cleanup
         $cache->clear();
         rmdir($cacheDir);
-    });
+    }
 
-    it('handles setMultiple with TTL', function () {
+    public function test_handles_setMultiple_with_TTL(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
@@ -171,16 +173,16 @@ describe('FilesystemCache', function () {
             'key2' => 'value2',
         ], 3600);
 
-        expect($result)->toBeTrue();
-        expect($cache->get('key1'))->toBe('value1');
-        expect($cache->get('key2'))->toBe('value2');
+        $this->assertTrue($result);
+        $this->assertSame('value1', $cache->get('key1'));
+        $this->assertSame('value2', $cache->get('key2'));
 
-        // Cleanup
         $cache->clear();
         rmdir($cacheDir);
-    });
+    }
 
-    it('handles deleteMultiple', function () {
+    public function test_handles_deleteMultiple(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
@@ -190,32 +192,28 @@ describe('FilesystemCache', function () {
 
         $result = $cache->deleteMultiple(['key1', 'key2']);
 
-        expect($result)->toBeTrue();
-        expect($cache->get('key1'))->toBeNull();
-        expect($cache->get('key2'))->toBeNull();
-        expect($cache->get('key3'))->toBe('value3');
+        $this->assertTrue($result);
+        $this->assertNull($cache->get('key1'));
+        $this->assertNull($cache->get('key2'));
+        $this->assertSame('value3', $cache->get('key3'));
 
-        // Cleanup
         $cache->clear();
         rmdir($cacheDir);
-    });
+    }
 
-    it('handles file read failure gracefully', function () {
+    public function test_handles_file_read_failure_gracefully(): void
+    {
         $cacheDir = sys_get_temp_dir() . '/test_fs_cache_' . uniqid();
         $cache = new FilesystemCache($cacheDir);
 
-        // Set a value first
         $cache->set('test_key', 'value', 3600);
 
-        // Corrupt the file by writing invalid data
         $files = glob($cacheDir . '/*.cache');
         file_put_contents($files[0], 'not a valid serialized array');
 
-        // Should return default for corrupted file
-        expect($cache->get('test_key', 'default'))->toBe('default');
+        $this->assertSame('default', $cache->get('test_key', 'default'));
 
-        // Cleanup
         $cache->clear();
         rmdir($cacheDir);
-    });
-});
+    }
+}

@@ -2,75 +2,69 @@
 
 declare(strict_types=1);
 
+namespace Tests\Feature\Logging;
+
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Client\ClientBuilder;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Filesystem\Path;
+use Tests\TestCase;
 
-// beforeEach(function () {
-//    clearTmpDir();
-// });
-// We use unique dirs per test or handle specific details
+#[Group('feature')]
+class PhysicalLoggingTest extends TestCase
+{
+    public function test_it_writes_physical_logs_to_disk(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"message": "success"}'),
+        ]);
+        $handler = HandlerStack::create($mock);
 
-test('it writes physical logs to disk', function () {
-    // 1. Arrange
-    $mock = new MockHandler([
-        new Response(200, [], '{"message": "success"}'),
-    ]);
-    $handler = HandlerStack::create($mock);
+        $logDir = $this->makeTmpDir('logs');
+        $domain = 'joo-service';
 
-    $logDir = makeTmpDir('logs');
-    $domain = 'joo-service';
+        $logger = \JOOservices\Client\Logging\MonologFactory::createDaily($domain, $logDir);
 
-    // 2. Act
-    $logger = \JOOservices\Client\Logging\MonologFactory::createDaily($domain, $logDir);
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->withLogger($logger, logBodies: true)
+            ->build();
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->withLogger($logger, logBodies: true) // Enable body logging
-        ->build();
+        $response = $client->get('/api/users');
 
-    $response = $client->get('/api/users');
+        $this->assertSame(200, $response->status());
 
-    // 3. Assert
-    expect($response->status())->toBe(200);
+        $date = date('Y-m-d');
+        $expectedFile = Path::join($logDir, $domain, "client-$date.log");
 
-    $date = date('Y-m-d');
-    $expectedFile = Path::join($logDir, $domain, "client-$date.log");
+        $this->assertTrue(file_exists($expectedFile), "Log file should exist at $expectedFile");
 
-    // Check file existence
-    expect(file_exists($expectedFile))->toBeTrue("Log file should exist at $expectedFile");
+        $content = file_get_contents($expectedFile);
+        $this->assertStringContainsString('GET /api/users', $content);
+        $this->assertStringContainsString('success', $content);
+    }
 
-    // Check content
-    $content = file_get_contents($expectedFile);
-    expect($content)->toContain('GET /api/users')
-        ->toContain('success');
-});
+    public function test_it_rotates_logs_daily(): void
+    {
+        $mock = new MockHandler([
+            new Response(500, [], 'Server Error'),
+        ]);
+        $handler = HandlerStack::create($mock);
+        $logDir = $this->makeTmpDir('logs-error');
 
-test('it rotates logs daily', function () {
-    // This is hard to test "real" rotation without changing system time,
-    // but we can verify the FILENAME format corresponds to current date,
-    // which effectively tests the rotation logic of MonologFactory.
-    // (Already covered above).
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->withDefaultLogging('errors', $logDir)
+            ->withHttpErrors(false)
+            ->build();
 
-    // Let's test a failed request log
-    $mock = new MockHandler([
-        new Response(500, [], 'Server Error'),
-    ]);
-    $handler = HandlerStack::create($mock);
-    $logDir = makeTmpDir('logs-error');
+        $client->get('/error-endpoint');
 
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->withDefaultLogging('errors', $logDir)
-        ->withHttpErrors(false) // Don't throw, just return response
-        ->build();
+        $date = date('Y-m-d');
+        $expectedFile = Path::join($logDir, 'errors', "client-$date.log");
 
-    $client->get('/error-endpoint');
-
-    $date = date('Y-m-d');
-    $expectedFile = Path::join($logDir, 'errors', "client-$date.log");
-
-    expect(file_get_contents($expectedFile))->toContain('Received response 500');
-});
+        $this->assertStringContainsString('Received response 500', file_get_contents($expectedFile));
+    }
+}

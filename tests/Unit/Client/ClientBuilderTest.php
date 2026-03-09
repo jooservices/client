@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Client;
+
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
@@ -10,14 +12,18 @@ use JOOservices\Client\Client\ClientBuilder;
 use JOOservices\Client\Contracts\HttpClientInterface;
 use JOOservices\Client\Resilience\CircuitBreakerConfig;
 use JOOservices\Client\Resilience\RetryConfig;
+use Mockery;
+use PHPUnit\Framework\Attributes\Group;
 use Psr\Http\Message\RequestInterface;
+use Tests\TestCase;
 
-describe('ClientBuilder', function () {
-
-
-    it('creates client with default settings', function () {
+#[Group('unit')]
+class ClientBuilderTest extends TestCase
+{
+    public function test_creates_client_with_default_settings(): void
+    {
         $captured = [];
-        $stack = captureGuzzleOptions($captured);
+        $stack = $this->captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withOption('handler', $stack)
@@ -25,32 +31,30 @@ describe('ClientBuilder', function () {
 
         $client->get('https://example.com');
 
-        expect($client)->toBeInstanceOf(HttpClientInterface::class);
-        // Defaults might be empty on options side, but let's just ensure it works
-        expect($captured)->toBeArray();
-    });
+        $this->assertInstanceOf(HttpClientInterface::class, $client);
+        $this->assertIsArray($captured);
+    }
 
-    it('sets base uri', function () {
-        // Base URI is a client constructor option in Guzzle, but ClientBuilder passes it via options to request?
-        // Actually ClientConfig::toGuzzleOptions() puts it in 'base_uri'.
-        // Guzzle Adapter merges it.
-
+    public function test_sets_base_uri(): void
+    {
         $captured = [];
-        $stack = captureGuzzleOptions($captured);
+        $stack = $this->captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withBaseUri('https://api.example.com')
             ->withOption('handler', $stack)
             ->build();
 
-        $client->get('/fail-if-no-base-uri'); // Relative URI relies on base_uri
+        $client->get('/fail-if-no-base-uri');
 
-        expect($captured)->toHaveKey('base_uri', 'https://api.example.com');
-    });
+        $this->assertArrayHasKey('base_uri', $captured);
+        $this->assertSame('https://api.example.com', $captured['base_uri']);
+    }
 
-    it('sets timeout', function () {
+    public function test_sets_timeout(): void
+    {
         $captured = [];
-        $stack = captureGuzzleOptions($captured);
+        $stack = $this->captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withTimeout(60)
@@ -59,12 +63,14 @@ describe('ClientBuilder', function () {
 
         $client->get('https://example.com');
 
-        expect($captured)->toHaveKey('timeout', 60);
-    });
+        $this->assertArrayHasKey('timeout', $captured);
+        $this->assertSame(60, $captured['timeout']);
+    }
 
-    it('sets connect timeout', function () {
+    public function test_sets_connect_timeout(): void
+    {
         $captured = [];
-        $stack = captureGuzzleOptions($captured);
+        $stack = $this->captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withConnectTimeout(5)
@@ -73,12 +79,14 @@ describe('ClientBuilder', function () {
 
         $client->get('https://example.com');
 
-        expect($captured)->toHaveKey('connect_timeout', 5);
-    });
+        $this->assertArrayHasKey('connect_timeout', $captured);
+        $this->assertSame(5, $captured['connect_timeout']);
+    }
 
-    it('sets headers', function () {
+    public function test_sets_headers(): void
+    {
         $captured = [];
-        $stack = captureGuzzleOptions($captured);
+        $stack = $this->captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withHeader('X-Test', 'Value')
@@ -88,14 +96,17 @@ describe('ClientBuilder', function () {
 
         $client->get('https://example.com');
 
-        expect($captured)->toHaveKey('headers');
-        expect($captured['headers'])->toHaveKey('X-Test', 'Value');
-        expect($captured['headers'])->toHaveKey('X-Another', 'Value2');
-    });
+        $this->assertArrayHasKey('headers', $captured);
+        $this->assertArrayHasKey('X-Test', $captured['headers']);
+        $this->assertSame('Value', $captured['headers']['X-Test']);
+        $this->assertArrayHasKey('X-Another', $captured['headers']);
+        $this->assertSame('Value2', $captured['headers']['X-Another']);
+    }
 
-    it('sets verify ssl', function () {
+    public function test_sets_verify_ssl(): void
+    {
         $captured = [];
-        $stack = captureGuzzleOptions($captured);
+        $stack = $this->captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withVerifySsl(false)
@@ -104,28 +115,31 @@ describe('ClientBuilder', function () {
 
         $client->get('https://example.com');
 
-        expect($captured)->toHaveKey('verify', false);
-    });
+        $this->assertArrayHasKey('verify', $captured);
+        $this->assertFalse($captured['verify']);
+    }
 
-    it('sets http errors', function () {
+    public function test_sets_http_errors(): void
+    {
         $captured = [];
-        $stack = captureGuzzleOptions($captured);
+        $stack = $this->captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
-            ->withHttpErrors(false) // Default is often true in Guzzle
+            ->withHttpErrors(false)
             ->withOption('handler', $stack)
             ->build();
 
         $client->get('https://example.com');
 
-        expect($captured)->toHaveKey('http_errors', false);
-    });
+        $this->assertArrayHasKey('http_errors', $captured);
+        $this->assertFalse($captured['http_errors']);
+    }
 
-    it('adds correlation id middleware', function () {
-        // Middleware modifies request, so we inspect request headers in mock
+    public function test_adds_correlation_id_middleware(): void
+    {
         $mock = new MockHandler([
             function (RequestInterface $request, array $options) {
-                expect($request->hasHeader('X-Correlation-ID'))->toBeTrue();
+                $this->assertTrue($request->hasHeader('X-Correlation-ID'));
                 return new Response(200);
             }
         ]);
@@ -137,12 +151,13 @@ describe('ClientBuilder', function () {
             ->build();
 
         $client->get('https://example.com');
-    });
+    }
 
-    it('adds user agent middleware', function () {
+    public function test_adds_user_agent_middleware(): void
+    {
         $mock = new MockHandler([
             function (RequestInterface $request, array $options) {
-                expect($request->getHeaderLine('User-Agent'))->toBe('TestApp/1.0');
+                $this->assertSame('TestApp/1.0', $request->getHeaderLine('User-Agent'));
                 return new Response(200);
             }
         ]);
@@ -154,13 +169,12 @@ describe('ClientBuilder', function () {
             ->build();
 
         $client->get('https://example.com');
-    });
+    }
 
-    it('adds cache middleware', function () {
-        // We verify cache option is passed or middleware is active.
-        // CacheMiddleware uses 'cache_ttl' option.
+    public function test_adds_cache_middleware(): void
+    {
         $captured = [];
-        $stack = captureGuzzleOptions($captured);
+        $stack = $this->captureGuzzleOptions($captured);
 
         $client = ClientBuilder::create()
             ->withCache(new MemoryCache(), 1800)
@@ -169,28 +183,28 @@ describe('ClientBuilder', function () {
 
         $client->get('https://example.com');
 
-        expect($client)->toBeInstanceOf(HttpClientInterface::class);
-    });
+        $this->assertInstanceOf(HttpClientInterface::class, $client);
+    }
 
-    it('adds retry middleware', function () {
-        // Retry middleware is added to the stack.
-        // Hard to test presence without triggering it.
+    public function test_adds_retry_middleware(): void
+    {
         $client = ClientBuilder::create()
             ->withRetry(new RetryConfig(maxAttempts: 3))
             ->build();
-        expect($client)->toBeInstanceOf(HttpClientInterface::class);
-    });
+        $this->assertInstanceOf(HttpClientInterface::class, $client);
+    }
 
-    it('adds circuit breaker middleware', function () {
+    public function test_adds_circuit_breaker_middleware(): void
+    {
         $client = ClientBuilder::create()
             ->withCircuitBreaker(new CircuitBreakerConfig(failureThreshold: 5))
             ->build();
-        expect($client)->toBeInstanceOf(HttpClientInterface::class);
-    });
+        $this->assertInstanceOf(HttpClientInterface::class, $client);
+    }
 
-    it('adds logger middleware', function () {
-        $logger = Mockery::mock(Psr\Log\LoggerInterface::class);
-        // We expect logger calls
+    public function test_adds_logger_middleware(): void
+    {
+        $logger = Mockery::mock(\Psr\Log\LoggerInterface::class);
         $logger->shouldReceive('info')->atLeast()->times(1);
         $logger->shouldReceive('log')->atLeast()->times(1);
 
@@ -203,10 +217,12 @@ describe('ClientBuilder', function () {
             ->build();
 
         $client->get('https://example.com');
-    });
+        $this->addToAssertionCount(1);
+    }
 
-    it('automatically adds wan ip logging metadata when logger is enabled', function () {
-        $logger = Mockery::mock(Psr\Log\LoggerInterface::class);
+    public function test_automatically_adds_wan_ip_logging_metadata_when_logger_is_enabled(): void
+    {
+        $logger = Mockery::mock(\Psr\Log\LoggerInterface::class);
 
         $logger->shouldReceive('info')
             ->atLeast()
@@ -225,9 +241,11 @@ describe('ClientBuilder', function () {
             ->build();
 
         $client->get('https://example.com');
-    });
+        $this->addToAssertionCount(1);
+    }
 
-    it('accepts custom handler stack', function () {
+    public function test_accepts_custom_handler_stack(): void
+    {
         $callCount = 0;
         $handler = function ($request, $options) use (&$callCount) {
             $callCount++;
@@ -240,6 +258,6 @@ describe('ClientBuilder', function () {
             ->build();
 
         $client->get('https://example.com');
-        expect($callCount)->toBe(1);
-    });
-});
+        $this->assertSame(1, $callCount);
+    }
+}

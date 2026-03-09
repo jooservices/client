@@ -2,78 +2,72 @@
 
 declare(strict_types=1);
 
+namespace Tests\Feature\Cache;
+
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Cache\FilesystemCache;
 use JOOservices\Client\Client\ClientBuilder;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
 
-beforeEach(function () {
-    clearTmpDir();
-});
+#[Group('feature')]
+class FilesystemCacheTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->clearTmpDir();
+    }
 
-test('it caches responses to disk and serves valid cache on hit', function () {
-    // 1. Arrange
-    $mock = new MockHandler([
-        new Response(200, [], '{"data": "fresh"}'),
-        new Response(200, [], '{"data": "fresh_2"}'), // Should NOT be reached if cached
-    ]);
+    public function test_it_caches_responses_to_disk_and_serves_valid_cache_on_hit(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"data": "fresh"}'),
+            new Response(200, [], '{"data": "fresh_2"}'),
+        ]);
 
-    $handler = HandlerStack::create($mock);
-    $cacheDir = makeTmpDir('cache');
+        $handler = HandlerStack::create($mock);
+        $cacheDir = $this->makeTmpDir('cache');
 
-    // 2. Build Client
-    $cache = new FilesystemCache($cacheDir);
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->withCache($cache, defaultTtl: 3600)
-        ->build();
+        $cache = new FilesystemCache($cacheDir);
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->withCache($cache, defaultTtl: 3600)
+            ->build();
 
-    // 3. First Call (Miss -> Network)
-    $response1 = $client->get('/api/data');
-    expect((string) $response1->toPsrResponse()->getBody())->toBe('{"data": "fresh"}');
+        $response1 = $client->get('/api/data');
+        $this->assertSame('{"data": "fresh"}', (string) $response1->toPsrResponse()->getBody());
 
-    // Verify file created
-    // Logic: FilesystemCache uses md5(key) as filename.
-    // Key logic in Middleware: "GET https://.../api/data" -> md5
-    // But we don't need to know internal naming if we verify side effect: directory not empty.
-    $files = scandir($cacheDir);
-    $cachedFiles = array_diff($files, ['.', '..']);
-    expect($cachedFiles)->not->toBeEmpty();
+        $files = scandir($cacheDir);
+        $cachedFiles = array_diff($files, ['.', '..']);
+        $this->assertNotEmpty($cachedFiles);
 
-    // 4. Second Call (Hit -> Cache)
-    // If it hits network, mock returns "fresh_2". If cache, "fresh".
-    $response2 = $client->get('/api/data');
-    expect((string) $response2->toPsrResponse()->getBody())->toBe('{"data": "fresh"}');
+        $response2 = $client->get('/api/data');
+        $this->assertSame('{"data": "fresh"}', (string) $response2->toPsrResponse()->getBody());
+    }
 
-    // Verify Mock was only called once (MockHandler throws if called when empty? Or we check count)
-    // MockHandler moves pointer. If we consumed 2nd response, getLastRequest would reflect it?
-    // Better: assert response body content is from first call.
-});
+    public function test_it_respects_TTL_and_expires_cache(): void
+    {
+        $mock = new MockHandler([
+            new Response(200, [], '{"data": "v1"}'),
+            new Response(200, [], '{"data": "v2"}'),
+        ]);
+        $handler = HandlerStack::create($mock);
+        $cacheDir = $this->makeTmpDir('cache_ttl');
 
-test('it respects TTL and expires cache', function () {
-    // We can't wait 3600s. We use 1s TTL and sleep 2s.
+        $cache = new FilesystemCache($cacheDir);
+        $client = ClientBuilder::create()
+            ->withOption('handler', $handler)
+            ->withCache($cache, defaultTtl: 1)
+            ->build();
 
-    $mock = new MockHandler([
-        new Response(200, [], '{"data": "v1"}'),
-        new Response(200, [], '{"data": "v2"}'),
-    ]);
-    $handler = HandlerStack::create($mock);
-    $cacheDir = makeTmpDir('cache_ttl');
+        $client->get('/api/expire');
 
-    $cache = new FilesystemCache($cacheDir);
-    $client = ClientBuilder::create()
-        ->withOption('handler', $handler)
-        ->withCache($cache, defaultTtl: 1) // 1 second
-        ->build();
+        sleep(2);
 
-    // Call 1
-    $client->get('/api/expire');
-
-    // Sleep 2s
-    sleep(2);
-
-    // Call 2 -> Should miss cache
-    $response = $client->get('/api/expire');
-    expect((string) $response->toPsrResponse()->getBody())->toBe('{"data": "v2"}');
-});
+        $response = $client->get('/api/expire');
+        $this->assertSame('{"data": "v2"}', (string) $response->toPsrResponse()->getBody());
+    }
+}

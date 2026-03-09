@@ -2,23 +2,30 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\Middleware;
+
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Client\HttpClient;
 use JOOservices\Client\Contracts\WanIpProviderInterface;
 use JOOservices\Client\Middleware\LoggingMiddleware;
 use JOOservices\Client\Support\TransferStatsBag;
+use Mockery;
+use PHPUnit\Framework\Attributes\Group;
 use Psr\Log\LoggerInterface;
+use Tests\TestCase;
 
-describe('LoggingMiddleware', function () {
-    it('logs request and response', function () {
+#[Group('unit')]
+class LoggingMiddlewareTest extends TestCase
+{
+    public function test_logs_request_and_response(): void
+    {
         $logger = Mockery::mock(LoggerInterface::class);
         $middleware = new LoggingMiddleware($logger);
 
         $request = new Request('GET', 'https://example.com/api');
         $response = new Response(201);
 
-        // Log request
         $logger->shouldReceive('info')
             ->once()
             ->withArgs(function ($message, $context) {
@@ -26,7 +33,6 @@ describe('LoggingMiddleware', function () {
                     $context['uri'] === 'https://example.com/api';
             });
 
-        // Log response
         $logger->shouldReceive('log')
             ->once()
             ->withArgs(function ($level, $message, $context) {
@@ -39,16 +45,18 @@ describe('LoggingMiddleware', function () {
         $next = fn ($r, $o) => $response;
 
         $middleware($request, [], $next);
-    });
+        $this->addToAssertionCount(1);
+    }
 
-    it('logs error level for 4xx/5xx responses', function () {
+    public function test_logs_error_level_for_4xx_5xx_responses(): void
+    {
         $logger = Mockery::mock(LoggerInterface::class);
         $middleware = new LoggingMiddleware($logger);
 
         $request = new Request('GET', 'https://example.com');
         $response = new Response(500);
 
-        $logger->shouldReceive('info'); // request log
+        $logger->shouldReceive('info');
 
         $logger->shouldReceive('log')
             ->once()
@@ -59,15 +67,17 @@ describe('LoggingMiddleware', function () {
         $next = fn ($r, $o) => $response;
 
         $middleware($request, [], $next);
-    });
+        $this->addToAssertionCount(1);
+    }
 
-    it('logs exception', function () {
+    public function test_logs_exception(): void
+    {
         $logger = Mockery::mock(LoggerInterface::class);
         $middleware = new LoggingMiddleware($logger);
 
         $request = new Request('GET', 'https://example.com');
 
-        $logger->shouldReceive('info'); // request log
+        $logger->shouldReceive('info');
 
         $logger->shouldReceive('error')
             ->once()
@@ -76,30 +86,30 @@ describe('LoggingMiddleware', function () {
                     isset($context['exception']);
             });
 
-        $next = fn ($r, $o) => throw new RuntimeException('Connection failed');
+        $next = fn ($r, $o) => throw new \RuntimeException('Connection failed');
 
-        expect(fn () => $middleware($request, [], $next))->toThrow(RuntimeException::class);
-    });
+        $this->expectException(\RuntimeException::class);
+        $middleware($request, [], $next);
+    }
 
-    it('logs bodies when enabled', function () {
+    public function test_logs_bodies_when_enabled(): void
+    {
         $logger = Mockery::mock(LoggerInterface::class);
         $middleware = new LoggingMiddleware($logger, logBodies: true);
 
         $request = new Request('POST', 'https://example.com', [], 'request body');
         $response = new Response(200, [], 'response body');
 
-        $logger->shouldReceive('info'); // req line
+        $logger->shouldReceive('info');
 
-        // Log Request Body
         $logger->shouldReceive('debug')
             ->once()
             ->withArgs(function ($message, $context) {
                 return $message === 'Request Body' && $context['body'] === 'request body';
             });
 
-        $logger->shouldReceive('log'); // res line
+        $logger->shouldReceive('log');
 
-        // Log Response Body
         $logger->shouldReceive('debug')
             ->once()
             ->withArgs(function ($message, $context) {
@@ -110,12 +120,11 @@ describe('LoggingMiddleware', function () {
 
         $middleware($request, [], $next);
 
-        // Ensure streams are rewound if possible (checked implicitly if logic runs without crashing)
-        // Check if body is still readable?
-        expect((string) $request->getBody())->toBe('request body');
-    });
+        $this->assertSame('request body', (string) $request->getBody());
+    }
 
-    it('adds local, wan, target ip metadata to response context', function () {
+    public function test_adds_local_wan_target_ip_metadata_to_response_context(): void
+    {
         $logger = Mockery::mock(LoggerInterface::class);
         $wanProvider = new class () implements WanIpProviderInterface {
             public function getPublicIp(): ?string
@@ -155,5 +164,6 @@ describe('LoggingMiddleware', function () {
         };
 
         $middleware($request, $options, $next);
-    });
-});
+        $this->addToAssertionCount(1);
+    }
+}
