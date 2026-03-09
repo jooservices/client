@@ -38,9 +38,9 @@ class RetryMiddleware implements MiddlewareInterface
                 }
 
                 return $response;
-            } catch (Throwable $e) {
-                if ($attempts >= $maxAttempts || !$this->shouldRetryException($e)) {
-                    throw $e;
+            } catch (Throwable $exception) {
+                if ($attempts >= $maxAttempts || !$this->shouldRetryException($exception)) {
+                    throw $exception;
                 }
 
                 $this->doWait($attempts);
@@ -53,10 +53,10 @@ class RetryMiddleware implements MiddlewareInterface
         return in_array($statusCode, $this->config->retryableStatuses, true);
     }
 
-    private function shouldRetryException(Throwable $e): bool
+    private function shouldRetryException(Throwable $exception): bool
     {
         foreach ($this->config->retryableExceptions as $class) {
-            if ($e instanceof $class) {
+            if ($exception instanceof $class) {
                 return true;
             }
         }

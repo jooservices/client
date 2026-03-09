@@ -27,9 +27,6 @@ class MonologFactory
         // If path is not provided, try ENV, else default to ./logs
         if ($path === null) {
             $path = getenv('JOO_CLIENT_LOG_PATH');
-            if (!is_string($path) || $path === '') {
-                $path = $_ENV['JOO_CLIENT_LOG_PATH'] ?? './logs';
-            }
         }
 
         if (!is_string($path)) {

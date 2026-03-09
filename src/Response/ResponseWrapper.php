@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace JOOservices\Client\Response;
 
+use InvalidArgumentException;
 use JOOservices\Client\Contracts\ResponseWrapperInterface;
 use JOOservices\Client\Exceptions\JsonDecodingException;
+use JsonException;
 use Psr\Http\Message\ResponseInterface;
 
 final class ResponseWrapper implements ResponseWrapperInterface
@@ -41,7 +43,7 @@ final class ResponseWrapper implements ResponseWrapperInterface
             }
 
             return $decoded;
-        } catch (\JsonException $e) {
+        } catch (JsonException $e) {
             throw new JsonDecodingException('Failed to decode JSON response: ' . $e->getMessage(), 0, $e);
         }
     }
@@ -54,13 +56,13 @@ final class ResponseWrapper implements ResponseWrapperInterface
     public function toDto(string $dtoClass): object
     {
         if (! class_exists($dtoClass)) {
-            throw new \InvalidArgumentException("DTO class $dtoClass does not exist");
+            throw new InvalidArgumentException("DTO class $dtoClass does not exist");
         }
 
         // Assuming jooservices/dto Dto::from() or similar static factory exists.
         // We use a dynamic call to forward the array.
         if (! method_exists($dtoClass, 'from')) {
-            throw new \InvalidArgumentException("DTO class $dtoClass must have a static from() method");
+            throw new InvalidArgumentException("DTO class $dtoClass must have a static from() method");
         }
 
         return $dtoClass::from($this->json());

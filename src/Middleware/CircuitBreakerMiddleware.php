@@ -48,10 +48,12 @@ class CircuitBreakerMiddleware implements MiddlewareInterface
                     // Close the circuit - reset all state
                     $this->store->reset();
                 }
-            } else {
-                // In Closed state: reset failure count on success
-                $this->store->recordSuccess();
+
+                return $response;
             }
+
+            // In Closed state: reset failure count on success
+            $this->store->recordSuccess();
 
             return $response;
         } catch (Throwable $e) {

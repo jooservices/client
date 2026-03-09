@@ -166,6 +166,10 @@ final class MongoDbLogger implements LoggerInterface
         $this->copyIfPresent($document, $normalizedContext, 'duration_ms');
         $this->copyIfPresent($document, $normalizedContext, 'correlation_id');
         $this->copyIfPresent($document, $normalizedContext, 'exception');
+        $this->copyIfPresent($document, $normalizedContext, 'local_ip');
+        $this->copyIfPresent($document, $normalizedContext, 'wan_ip');
+        $this->copyIfPresent($document, $normalizedContext, 'target_ip');
+        $this->copyIfPresent($document, $normalizedContext, 'target_hostname');
 
         if ($message === 'Request Body' && isset($normalizedContext['body'])) {
             [$payload, $truncated] = $this->trimPayload(
@@ -297,7 +301,7 @@ final class MongoDbLogger implements LoggerInterface
             return '[REDACTED]';
         }
 
-        foreach ($value as $innerKey => $innerValue) {
+        foreach (array_keys($value) as $innerKey) {
             if (is_string($innerKey) && in_array(strtolower($innerKey), $this->redactKeys, true)) {
                 $value[$innerKey] = '[REDACTED]';
             }

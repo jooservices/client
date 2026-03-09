@@ -309,6 +309,10 @@ $client = ClientBuilder::create()
 - URI
 - Status code
 - Duration
+- local_ip
+- target_ip
+- target_hostname
+- wan_ip
 - Headers (redacted sensitive ones)
 - Body (if enabled)
 

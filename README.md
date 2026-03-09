@@ -106,6 +106,28 @@ This runs:
 - **Pest**: Unit & Feature Tests
 - **PHPBench**: Performance Analysis
 
+## Docker Development
+
+If PHP is not installed locally, run everything in Docker.
+
+```bash
+docker compose up -d --build mongodb
+docker compose run --rm php composer install
+docker compose run --rm php vendor/bin/pest
+```
+
+For live network integration tests (real sites), run:
+
+```bash
+docker compose run --rm -e JOOCLIENT_RUN_LIVE_NETWORK_TESTS=1 php \
+    vendor/bin/pest tests/Feature/Logging/RealSiteIpLoggingTest.php
+```
+
+This test hits:
+- `https://onejav.com`
+- `https://google.com`
+- `https://microsoft.com`
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.

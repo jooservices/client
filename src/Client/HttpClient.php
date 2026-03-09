@@ -6,17 +6,22 @@ namespace JOOservices\Client\Client;
 
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\TransferStats;
+use InvalidArgumentException;
 use JOOservices\Client\Contracts\AsyncHttpClientInterface;
 use JOOservices\Client\Contracts\HttpClientInterface;
 use JOOservices\Client\Contracts\ResponseWrapperInterface;
 use JOOservices\Client\Contracts\TransportAdapterInterface;
 use JOOservices\Client\Response\ResponseWrapper;
 use JOOservices\Client\Support\OptionsMerger;
+use JOOservices\Client\Support\TransferStatsBag;
 use JOOservices\Client\ValueObjects\ClientConfig;
 use Psr\Http\Message\RequestInterface;
 
 final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientInterface
 {
+    public const TRANSFER_STATS_OPTION_KEY = '_joo_transfer_stats';
+
     private OptionsMerger $merger;
 
     public function __construct(
@@ -56,6 +61,7 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
     {
         $globalOptions = $this->config->toGuzzleOptions();
         $finalOptions = $this->merger->merge($globalOptions, $options);
+        $finalOptions = $this->attachTransferStatsCollector($finalOptions);
         $request = new Request($method, $uri);
         $psrResponse = $this->adapter->send($request, $finalOptions);
         return new ResponseWrapper($psrResponse);
@@ -75,12 +81,53 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
     {
         $globalOptions = $this->config->toGuzzleOptions();
         $finalOptions = $this->merger->merge($globalOptions, $options);
+        $finalOptions = $this->attachTransferStatsCollector($finalOptions);
         $request = new Request($method, $uri);
 
         return $this->adapter->sendAsync($request, $finalOptions)
             ->then(function ($response) {
                 return new ResponseWrapper($response);
             });
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     * @return array<string, mixed>
+     */
+    private function attachTransferStatsCollector(array $options): array
+    {
+        $statsBag = new TransferStatsBag();
+        $existingOnStats = $options['on_stats'] ?? null;
+
+        $internalOnStats = static function (TransferStats $stats) use ($statsBag): void {
+            $handlerStats = $stats->getHandlerStats();
+            if (is_array($handlerStats)) {
+                $primaryIp = $handlerStats['primary_ip'] ?? null;
+                $localIp = $handlerStats['local_ip'] ?? null;
+
+                $statsBag->targetIp = is_string($primaryIp) && $primaryIp !== '' ? $primaryIp : null;
+                $statsBag->localIp = is_string($localIp) && $localIp !== '' ? $localIp : null;
+            }
+
+            $effectiveUri = $stats->getEffectiveUri();
+            $statsBag->effectiveUri = $effectiveUri !== null ? (string) $effectiveUri : null;
+        };
+
+        $options['on_stats'] = $internalOnStats;
+
+        if (is_callable($existingOnStats)) {
+            $options['on_stats'] = static function (TransferStats $stats) use (
+                $internalOnStats,
+                $existingOnStats
+            ): void {
+                $internalOnStats($stats);
+                $existingOnStats($stats);
+            };
+        }
+
+        $options[self::TRANSFER_STATS_OPTION_KEY] = $statsBag;
+
+        return $options;
     }
 
     /**
@@ -97,7 +144,8 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
                     $promise = $r;
                 } elseif ($r instanceof RequestInterface) {
                     $options = [];
-                    if ($headers = $r->getHeaders()) {
+                    $headers = $r->getHeaders();
+                    if ($headers !== []) {
                         $options['headers'] = $headers;
                     }
                     $body = (string) $r->getBody();
@@ -107,6 +155,13 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
                     $promise = $this->requestAsync($r->getMethod(), (string) $r->getUri(), $options);
                 } elseif (is_callable($r)) {
                     $promise = $r();
+                }
+
+                if (!$promise instanceof PromiseInterface) {
+                    throw new InvalidArgumentException(
+                        'Batch item must be a PromiseInterface, RequestInterface, or callable ' .
+                        'returning PromiseInterface.'
+                    );
                 }
 
                 // Wrap to preserve key and handle success/failure

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use JOOservices\Client\Client\HttpClient;
+use JOOservices\Client\Contracts\WanIpProviderInterface;
 use JOOservices\Client\Middleware\LoggingMiddleware;
+use JOOservices\Client\Support\TransferStatsBag;
 use Psr\Log\LoggerInterface;
 
 describe('LoggingMiddleware', function () {
@@ -110,5 +113,47 @@ describe('LoggingMiddleware', function () {
         // Ensure streams are rewound if possible (checked implicitly if logic runs without crashing)
         // Check if body is still readable?
         expect((string) $request->getBody())->toBe('request body');
+    });
+
+    it('adds local, wan, target ip metadata to response context', function () {
+        $logger = Mockery::mock(LoggerInterface::class);
+        $wanProvider = new class () implements WanIpProviderInterface {
+            public function getPublicIp(): ?string
+            {
+                return '198.51.100.25';
+            }
+        };
+
+        $middleware = new LoggingMiddleware($logger, false, $wanProvider);
+        $request = new Request('GET', 'https://example.com/path');
+        $response = new Response(200);
+
+        $logger->shouldReceive('info')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return isset($context['wan_ip'])
+                    && $context['wan_ip'] === '198.51.100.25'
+                    && $context['target_hostname'] === 'example.com';
+            });
+
+        $logger->shouldReceive('log')
+            ->once()
+            ->withArgs(function ($level, $message, $context) {
+                return $level === 'info'
+                    && $context['target_ip'] === '203.0.113.99'
+                    && $context['local_ip'] === '10.0.0.21';
+            });
+
+        $statsBag = new TransferStatsBag();
+        $options = [HttpClient::TRANSFER_STATS_OPTION_KEY => $statsBag];
+
+        $next = function ($r, $o) use ($response, $statsBag) {
+            $statsBag->targetIp = '203.0.113.99';
+            $statsBag->localIp = '10.0.0.21';
+
+            return $response;
+        };
+
+        $middleware($request, $options, $next);
     });
 });

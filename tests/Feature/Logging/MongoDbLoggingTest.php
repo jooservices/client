@@ -61,6 +61,7 @@ test('it maps payloads through ClientBuilder + LoggingMiddleware + MongoDbLogger
 
     expect($requestLine)->toHaveKey('method', 'POST');
     expect($requestLine)->toHaveKey('uri', 'https://example.com/mongo-e2e');
+    expect($requestLine)->toHaveKey('target_hostname', 'example.com');
 
     expect($responseLine)->toHaveKey('status', 200);
     expect($responseLine)->toHaveKey('duration_ms');

@@ -1,0 +1,27 @@
+ Container client-mongodb-1 Running 
+ Container client-mongodb-1 Waiting 
+ Container client-mongodb-1 Healthy 
+ Container client-php-run-8899e4079c40 Creating 
+ Container client-php-run-8899e4079c40 Created 
+Note: Using configuration file /app/phpstan.neon.
+  0/36 [░░░░░░░░░░░░░░░░░░░░░░░░░░░░]   0%[1G[2K 20/36 [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░]  55%[1G[2K 36/36 [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓] 100%
+
+ -- -------------------------------------------------------------------------- 
+     Error                                                                     
+ -- -------------------------------------------------------------------------- 
+     Child process error: PHPStan process crashed because it reached           
+     configured PHP memory limit: 128M                                         
+     Increase your memory limit in php.ini or run PHPStan with --memory-limit  
+     CLI option.                                                               
+      while running parallel worker                                            
+ -- -------------------------------------------------------------------------- 
+
+
+ [ERROR] Found 1 error                                                          
+
+⚠️  Result is incomplete because of severe errors. ⚠️
+   Fix these errors first and then re-run PHPStan
+   to get all reported errors.
+
+Script vendor/bin/phpstan analyse handling the analyse event returned with error code 1
+

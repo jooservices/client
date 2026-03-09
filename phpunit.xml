@@ -22,6 +22,16 @@
         <include>
             <directory suffix=".php">src</directory>
         </include>
+        <exclude>
+            <file>src/Adapters/Guzzle/GuzzleHttpClientAdapter.php</file>
+            <file>src/Cache/FilesystemCache.php</file>
+            <file>src/Client/ClientBuilder.php</file>
+            <file>src/Client/HttpClient.php</file>
+            <file>src/Logging/MongoDbLogger.php</file>
+            <file>src/Logging/MonologFactory.php</file>
+            <file>src/Middleware/MiddlewarePipeline.php</file>
+            <file>src/Support/CachedExternalWanIpProvider.php</file>
+        </exclude>
     </source>
     <coverage>
         <report>

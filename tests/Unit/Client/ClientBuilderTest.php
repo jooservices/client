@@ -10,7 +10,6 @@ use JOOservices\Client\Client\ClientBuilder;
 use JOOservices\Client\Contracts\HttpClientInterface;
 use JOOservices\Client\Resilience\CircuitBreakerConfig;
 use JOOservices\Client\Resilience\RetryConfig;
-use Monolog\Logger;
 use Psr\Http\Message\RequestInterface;
 
 describe('ClientBuilder', function () {
@@ -193,6 +192,28 @@ describe('ClientBuilder', function () {
         $logger = Mockery::mock(Psr\Log\LoggerInterface::class);
         // We expect logger calls
         $logger->shouldReceive('info')->atLeast()->times(1);
+        $logger->shouldReceive('log')->atLeast()->times(1);
+
+        $mock = new MockHandler([new Response(200)]);
+        $stack = HandlerStack::create($mock);
+
+        $client = ClientBuilder::create()
+            ->withLogger($logger, false)
+            ->withOption('handler', $stack)
+            ->build();
+
+        $client->get('https://example.com');
+    });
+
+    it('automatically adds wan ip logging metadata when logger is enabled', function () {
+        $logger = Mockery::mock(Psr\Log\LoggerInterface::class);
+
+        $logger->shouldReceive('info')
+            ->atLeast()
+            ->times(1)
+            ->withArgs(function ($message, $context) {
+                return array_key_exists('wan_ip', $context);
+            });
         $logger->shouldReceive('log')->atLeast()->times(1);
 
         $mock = new MockHandler([new Response(200)]);

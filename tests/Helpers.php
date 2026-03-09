@@ -5,6 +5,7 @@ declare(strict_types=1);
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
+use MongoDB\Client as MongoClient;
 use Psr\Http\Message\RequestInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
@@ -74,7 +75,7 @@ function captureGuzzleOptions(array &$capturedOptions): HandlerStack
  */
 function mongoAvailabilityError(): ?string
 {
-    if (!class_exists(MongoDB\Client::class)) {
+    if (!class_exists(MongoClient::class)) {
         return 'mongodb/mongodb client class not available.';
     }
 
@@ -84,7 +85,7 @@ function mongoAvailabilityError(): ?string
     }
 
     try {
-        $client = new MongoDB\Client($uri);
+        $client = new MongoClient($uri);
         $client->selectDatabase('admin')->command(['ping' => 1]);
     } catch (Throwable $e) {
         return 'MongoDB is not reachable on host: ' . $e->getMessage();
