@@ -110,6 +110,7 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
             }
 
             $effectiveUri = $stats->getEffectiveUri();
+            /** @phpstan-ignore ternary.elseUnreachable (getEffectiveUri() can return null at runtime per PSR-7) */
             $statsBag->effectiveUri = $effectiveUri !== null ? (string) $effectiveUri : null;
         };
 
