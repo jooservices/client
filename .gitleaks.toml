@@ -4,5 +4,6 @@ title = "jooservices-client-gitleaks"
 description = "Global allow list"
 paths = [
   '''^coverage/''',
-  '''^vendor/'''
+  '''^vendor/''',
+  '''^\.phpdoc/cache/'''
 ]

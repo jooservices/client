@@ -5,7 +5,7 @@ A robust, layered HTTP Client wrapper designed for extensibility, strict typing,
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.5-blue)](https://php.net/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%209-success)](phpstan.neon)
-[![Coverage](https://img.shields.io/badge/Coverage-%3E%3D98%25-success)](coverage/index.html)
+[![Coverage](https://img.shields.io/badge/Coverage-%3E%3D98%25-success)](docs/04-development/testing.md)
 [![Docker](https://img.shields.io/badge/Docker-enabled-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![Packagist](https://img.shields.io/packagist/v/jooservices/client)](https://packagist.org/packages/jooservices/client)
 [![Latest Release](https://img.shields.io/github/v/release/jooservices/client)](https://github.com/jooservices/client/releases)

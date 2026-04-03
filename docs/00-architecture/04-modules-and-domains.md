@@ -648,6 +648,6 @@ Based on repository analysis, the following are NOT present:
 ## Related Documents
 
 - [Project Overview](01-project-overview.md)
-- [System Architecture](../00-architecture/05-data-flow.md)
+- [System Architecture](05-data-flow.md)
 - [API Reference](../02-user-guide/api-reference.md)
 - [Testing Strategy](../04-development/testing.md)

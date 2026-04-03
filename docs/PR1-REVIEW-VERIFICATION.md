@@ -1,5 +1,7 @@
 # PR #1 Review Issues – Verification Summary
 
+> Lifecycle note: despite the PR-prefixed filename, this document is intentionally retained as a persistent audit artifact referenced by development docs.
+
 Checked against current `develop` (or branch) to see which review comments are **valid** and **fixable**.
 
 ---

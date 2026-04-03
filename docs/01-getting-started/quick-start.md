@@ -13,5 +13,5 @@ $response = $client->get('/health');
 
 ## Next Steps
 
-- See `../02-user-guide/api-reference.md` for API surface
-- See `../03-examples/` for runnable examples
+- See [API Reference](../02-user-guide/api-reference.md) for API surface
+- See [Examples](../03-examples/) for runnable examples

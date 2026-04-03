@@ -52,7 +52,7 @@ class FilesystemCache implements CacheInterface
             return $default;
         }
 
-        if (!is_array($data) || !isset($data['expiresAt'], $data['value'])) {
+        if (!is_array($data) || !array_key_exists('expiresAt', $data) || !array_key_exists('value', $data)) {
             unlink($filename);
             return $default;
         }
@@ -60,7 +60,11 @@ class FilesystemCache implements CacheInterface
         // Reconstruct DateTimeImmutable from ISO 8601 string
         $expiresAt = null;
         $expiresAtRaw = $data['expiresAt'];
-        if (is_string($expiresAtRaw) && $expiresAtRaw !== '') {
+        if ($expiresAtRaw !== null) {
+            if (!is_string($expiresAtRaw) || $expiresAtRaw === '') {
+                unlink($filename);
+                return $default;
+            }
             try {
                 $expiresAt = new DateTimeImmutable($expiresAtRaw);
             } catch (\Exception $e) {
