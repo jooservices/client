@@ -249,5 +249,5 @@ The following cannot be determined...
 ## Related Documents
 
 - [Documentation Standards](documentation-standards.md)
-- [Known Gaps, Risks, and Tech Debt](../PR1-REVIEW-VERIFICATION.md)
-- [Source Evidence Gaps](../PR1-REVIEW-VERIFICATION.md)
+- [Known Gaps, Risks, and Tech Debt (retained audit artifact)](../PR1-REVIEW-VERIFICATION.md)
+- [Source Evidence Gaps (retained audit artifact)](../PR1-REVIEW-VERIFICATION.md)

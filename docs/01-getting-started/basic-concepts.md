@@ -272,4 +272,4 @@ JOOservices HTTP Client is a well-architected, type-safe PHP library that enhanc
 - [Project Overview](../00-architecture/01-project-overview.md) - Technical overview
 - [Feature Inventory](../00-architecture/04-modules-and-domains.md) - Complete feature list
 - [System Architecture](../00-architecture/05-data-flow.md) - Technical architecture
-- [Known Gaps and Risks](../PR1-REVIEW-VERIFICATION.md) - Detailed risk assessment
+- [Known Gaps and Risks (retained audit artifact)](../PR1-REVIEW-VERIFICATION.md) - Detailed risk assessment
