@@ -1,65 +1,26 @@
 # JOOClient Documentation
 
-Complete documentation for JOOClient - A robust, layered HTTP Client wrapper for PHP 8.5+.
+Documentation is organized with DTO-aligned indexing while preserving client-specific content.
 
-> **Note**: Version 1.1.0 continues from the v1.0.0 rewrite (clean architecture, type safety). 
-> Tests run on PHPUnit 12; docs reflect the current codebase.
+## Documentation Structure
 
-## 📚 Documentation Structure
+- [00-architecture](00-architecture)
+- [01-getting-started](01-getting-started)
+- [02-user-guide](02-user-guide)
+- [03-examples](03-examples)
+- [04-development](04-development)
 
-### 📖 [User Documentation](user/) - For End Users
+## Quick Links
 
-- **[Examples](user/examples/)** - Working code examples
-- **[API Reference](user/reference/)** - Class and method reference
+- [Project overview](00-architecture/01-project-overview.md)
+- [Installation](01-getting-started/installation.md)
+- [Quick start](01-getting-started/quick-start.md)
+- [API reference](02-user-guide/api-reference.md)
+- [Examples](03-examples/README.md)
+- [CI/CD](04-development/ci-cd.md)
 
-## 🎯 Quick Start
+## Related Files
 
-### Basic Usage
-
-```php
-use JOOservices\Client\Client\ClientBuilder;
-
-$client = ClientBuilder::create()
-    ->withBaseUri('https://api.example.com')
-    ->withTimeout(5)
-    ->withHeader('Authorization', 'Bearer token')
-    ->build();
-
-$response = $client->get('/users/1');
-echo $response->status(); // 200
-```
-
-### With Middleware
-
-```php
-use JOOservices\Client\Resilience\RetryConfig;
-use JOOservices\Client\Cache\MemoryCache;
-
-$client = ClientBuilder::create()
-    ->withBaseUri('https://api.example.com')
-    ->withRetry(new RetryConfig(maxAttempts: 3))
-    ->withCache(new MemoryCache(), defaultTtl: 3600)
-    ->withDefaultLogging('my-app')
-    ->build();
-```
-
-## 📖 Available Features
-
-- **Strictly Typed Configuration** - Type-safe `ClientConfig` value object
-- **Middleware Pipeline** - Extensible middleware architecture
-- **Resilience Patterns** - Retry with backoff/jitter, Circuit Breaker
-- **Caching** - PSR-16 compatible (Memory, Filesystem)
-- **Logging** - PSR-3 compatible (Monolog integration)
-- **Async Support** - Promise-based async requests and batch processing
-
-## 🌐 Related Documentation
-
-- **[Main README](../README.md)** - Package overview and features
-- **[CHANGELOG](../CHANGELOG.md)** - Version history
-- **[CONTRIBUTING](../CONTRIBUTING.md)** - Contribution guidelines
-
----
-
-**Copyright (c) 2026 Viet Vu <jooservices@gmail.com>**  
-**Company: JOOservices Ltd**  
-Licensed under the MIT License.
+- [Main README](../README.md)
+- [CHANGELOG](../CHANGELOG.md)
+- [CONTRIBUTING](../CONTRIBUTING.md)

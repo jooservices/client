@@ -1,0 +1,30 @@
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '*.md'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/workflows/**'
+
+quality:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'phpstan.neon'
+          - 'phpcs.xml'
+          - 'phpmd.xml'
+          - 'pint.json'
+          - '.php-cs-fixer.dist.php'
+          - 'composer.json'
+
+source:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/**'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/**'

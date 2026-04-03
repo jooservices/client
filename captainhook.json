@@ -1,0 +1,21 @@
+{
+    "config": {
+        "run-mode": "php"
+    },
+    "pre-commit": {
+        "enabled": true,
+        "actions": [
+            {
+                "action": "composer lint"
+            }
+        ]
+    },
+    "pre-push": {
+        "enabled": true,
+        "actions": [
+            {
+                "action": "composer quality"
+            }
+        ]
+    }
+}

@@ -1,0 +1,8 @@
+title = "jooservices-client-gitleaks"
+
+[allowlist]
+description = "Global allow list"
+paths = [
+  '''^coverage/''',
+  '''^vendor/'''
+]
