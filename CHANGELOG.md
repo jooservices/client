@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-03
+
+### Added
+- **CI/CD**: Split pipeline into focused workflows: `ci.yml`, `release.yml`, `semantic-pr.yml`, `pr-labeler.yml`, `secret-scanning.yml`, and `scorecard.yml`.
+- **Quality Tooling**: Added CaptainHook, PHP-CS-Fixer, Gitleaks, phpDocumentor config, Sonar config, and Scrutinizer config.
+- **AI Workflow**: Added repository AI scaffolding and guidance files (`AGENTS.md`, `CLAUDE.md`, `ai/skills`, `.claude/commands`, `.cursor/rules`).
+- **Coverage**: Extended unit tests to fully cover `LoggingMiddleware` and `InMemoryStateStore` recovery branches.
+
+### Changed
+- **Version**: Updated package version to `1.2.0` in `composer.json`.
+- **Docs**: Reorganized documentation into DTO-aligned indexed structure (`00-architecture` to `04-development`) and refreshed internal cross-links.
+- **Composer Scripts**: Standardized lint/quality script matrix (`pint`, `phpcs`, `phpmd`, `phpstan`, `lint`, `quality`, hook install).
+- **Static Analysis**: Enabled baseline include in `phpstan.neon` and tightened cache date parsing behavior in `FilesystemCache`.
+
+### Removed
+- **Legacy Docs Layout**: Removed deprecated documentation trees superseded by indexed structure.
+
 ## [1.1.0] - 2026-03-10
 
 ### Added

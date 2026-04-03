@@ -256,4 +256,61 @@ class LoggingMiddlewareTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $middleware($request, $options, $next);
     }
+
+    public function test_logs_null_target_hostname_and_ignores_invalid_transfer_stats(): void
+    {
+        $logger = Mockery::mock(LoggerInterface::class);
+        $middleware = new LoggingMiddleware($logger);
+
+        $request = new Request('GET', '/relative-path');
+        $response = new Response(200);
+        $options = [HttpClient::TRANSFER_STATS_OPTION_KEY => new \stdClass()];
+
+        $logger->shouldReceive('info')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return $context['target_hostname'] === null
+                    && $context['target_ip'] === null
+                    && $context['local_ip'] === null;
+            });
+
+        $logger->shouldReceive('log')
+            ->once()
+            ->withArgs(function ($level, $message, $context) {
+                return $level === 'info'
+                    && $context['target_hostname'] === null
+                    && $context['target_ip'] === null
+                    && $context['local_ip'] === null;
+            });
+
+        $next = fn ($r, $o) => $response;
+        $middleware($request, $options, $next);
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_resolves_target_hostname_in_catch_when_effective_uri_arrives_late(): void
+    {
+        $logger = Mockery::mock(LoggerInterface::class);
+        $middleware = new LoggingMiddleware($logger);
+
+        $request = new Request('GET', '/late-failure');
+        $statsBag = new TransferStatsBag();
+        $options = [HttpClient::TRANSFER_STATS_OPTION_KEY => $statsBag];
+
+        $logger->shouldReceive('info')->once();
+        $logger->shouldReceive('error')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return str_contains($message, 'Exception for GET /late-failure')
+                    && $context['target_hostname'] === 'late.example.com';
+            });
+
+        $next = function ($r, $o) use ($statsBag) {
+            $statsBag->effectiveUri = 'https://late.example.com/late-failure';
+            throw new \RuntimeException('Late failure');
+        };
+
+        $this->expectException(\RuntimeException::class);
+        $middleware($request, $options, $next);
+    }
 }
