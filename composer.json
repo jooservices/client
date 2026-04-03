@@ -2,7 +2,7 @@
     "name": "jooservices/client",
     "description": "A robust, layered HTTP Client wrapper for JOOservices",
     "type": "library",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "license": "MIT",
     "authors": [
         {
