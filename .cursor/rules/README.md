@@ -1,18 +1,14 @@
 # Cursor Rules
 
-Workspace-specific coding rules for Cursor-based workflows.
+Workspace-specific rule files for Cursor-based workflows.
 
-## Current Status
+## Available Rules
 
-No dedicated rule files are committed yet.
-
-## Suggested Rule Topics
-
-- Preserve public API compatibility in `src/`.
-- Keep docs structure aligned with DTO-style numbered indexes.
-- Require running `composer lint` and `composer quality` before completion.
+- `api-stability.mdc`: preserve package API and identity in `src/`.
+- `docs-structure.mdc`: keep docs aligned with the numbered structure and valid local links.
+- `validation-gates.mdc`: require the repo validation contract before completion.
 
 ## Maintenance
 
-- Update this index when new rule files are added.
-- Mirror critical constraints from `AGENTS.md` to avoid conflicting guidance.
+- Mirror critical constraints from [AGENTS.md](../../AGENTS.md) and [CLAUDE.md](../../CLAUDE.md) without introducing conflicting instructions.
+- Update this index whenever a rule file is added, renamed, or removed.

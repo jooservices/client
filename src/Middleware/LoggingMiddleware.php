@@ -30,6 +30,7 @@ class LoggingMiddleware implements MiddlewareInterface
         $this->wanIpProvider = $wanIpProvider;
     }
 
+    /** @SuppressWarnings("PHPMD.ExcessiveMethodLength") */
     public function __invoke(RequestInterface $request, array $options, Closure $next): ResponseInterface
     {
         $start = microtime(true);
@@ -55,12 +56,7 @@ class LoggingMiddleware implements MiddlewareInterface
         $this->logger->info("Sending request to {$method} {$uri}", $context);
 
         if ($this->logBodies) {
-            // Be careful with large bodies!
-            $this->logger->debug('Request Body', [
-                'body' => (string) $request->getBody(),
-                'headers' => $request->getHeaders()
-            ]);
-            $request->getBody()->rewind();
+            $this->logRequestBody($request);
         }
 
         try {
@@ -70,16 +66,7 @@ class LoggingMiddleware implements MiddlewareInterface
             $duration = round((microtime(true) - $start) * 1000, 2);
             $statusCode = $response->getStatusCode();
 
-            $transferStats = $this->getTransferStatsBag($options);
-            $context['target_ip'] = $transferStats?->targetIp;
-            $context['local_ip'] = $transferStats?->localIp;
-            if ($context['target_hostname'] === null && $transferStats?->effectiveUri !== null) {
-                $context['target_hostname'] = $this->resolveTargetHostname(
-                    (string) $transferStats->effectiveUri,
-                    $options,
-                    null
-                );
-            }
+            $context = $this->updateTransferContext($context, $options);
 
             $context['status'] = $statusCode;
             $context['duration_ms'] = $duration;
@@ -93,36 +80,59 @@ class LoggingMiddleware implements MiddlewareInterface
             );
 
             if ($this->logBodies) {
-                // If body is seekable, log it. CAUTION: Consumes stream if not rewindable.
-                // PSR-7 streams usually comply, but Guzzle streams do.
-                $body = (string) $response->getBody();
-                $this->logger->debug('Response Body', [
-                    'body' => $body,
-                    'headers' => $response->getHeaders()
-                ]);
-                $response->getBody()->rewind();
+                $this->logResponseBody($response);
             }
 
             return $response;
         } catch (Throwable $e) {
             $duration = round((microtime(true) - $start) * 1000, 2);
-            $transferStats = $this->getTransferStatsBag($options);
-
-            $context['target_ip'] = $transferStats?->targetIp;
-            $context['local_ip'] = $transferStats?->localIp;
-            if ($context['target_hostname'] === null && $transferStats?->effectiveUri !== null) {
-                $context['target_hostname'] = $this->resolveTargetHostname(
-                    (string) $transferStats->effectiveUri,
-                    $options,
-                    null
-                );
-            }
+            $context = $this->updateTransferContext($context, $options);
             $context['duration_ms'] = $duration;
             $context['exception'] = $e->getMessage();
 
             $this->logger->error("Exception for {$method} {$uri}: " . $e->getMessage(), $context);
             throw $e;
         }
+    }
+
+    private function logRequestBody(RequestInterface $request): void
+    {
+        $this->logger->debug('Request Body', [
+            'body' => (string) $request->getBody(),
+            'headers' => $request->getHeaders(),
+        ]);
+        $request->getBody()->rewind();
+    }
+
+    private function logResponseBody(ResponseInterface $response): void
+    {
+        $this->logger->debug('Response Body', [
+            'body' => (string) $response->getBody(),
+            'headers' => $response->getHeaders(),
+        ]);
+        $response->getBody()->rewind();
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $options
+     * @return array<string, mixed>
+     */
+    private function updateTransferContext(array $context, array $options): array
+    {
+        $transferStats = $this->getTransferStatsBag($options);
+        $context['target_ip'] = $transferStats?->targetIp;
+        $context['local_ip'] = $transferStats?->localIp;
+
+        if ($context['target_hostname'] === null && $transferStats?->effectiveUri !== null) {
+            $context['target_hostname'] = $this->resolveTargetHostname(
+                $transferStats->effectiveUri,
+                $options,
+                null
+            );
+        }
+
+        return $context;
     }
 
     /**

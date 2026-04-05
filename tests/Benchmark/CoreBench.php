@@ -6,8 +6,10 @@ namespace JOOservices\Client\Tests\Benchmark;
 
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Response;
 use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Contracts\HttpClientInterface;
 
 /**
  * @Revs(1000)
@@ -15,14 +17,16 @@ use JOOservices\Client\Client\ClientBuilder;
  */
 class CoreBench
 {
-    private $guzzleClient;
-    private $jooClient;
+    private GuzzleClient $guzzleClient;
+
+    private HttpClientInterface $jooClient;
 
     public function __construct()
     {
         // Use static responses so the handler works for long benchmark runs.
-        $handler = function ($request, $options) {
+        $handler = static function (mixed $request, mixed $options): PromiseInterface {
             unset($request, $options);
+
             return \GuzzleHttp\Promise\Create::promiseFor(
                 new Response(200, [], '{"status":"ok"}')
             );
@@ -41,7 +45,7 @@ class CoreBench
     /**
      * Measure overhead of Builder
      */
-    public function benchBuilder()
+    public function benchBuilder(): void
     {
         ClientBuilder::create()
             ->withBaseUri('https://api.example.com')
@@ -52,7 +56,7 @@ class CoreBench
     /**
      * Baseline: Raw Guzzle Request
      */
-    public function benchGuzzleRequest()
+    public function benchGuzzleRequest(): void
     {
         $this->guzzleClient->request('GET', '/test');
     }
@@ -60,7 +64,7 @@ class CoreBench
     /**
      * Target: JOO Client Request
      */
-    public function benchJooRequest()
+    public function benchJooRequest(): void
     {
         $this->jooClient->get('/test');
     }

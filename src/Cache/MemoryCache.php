@@ -76,8 +76,7 @@ class MemoryCache implements CacheInterface
     }
 
     /**
-     * @param iterable<string, mixed> $values
-     * @param int|DateInterval|null $ttl
+     * @param iterable<array-key, mixed> $values
      */
     public function setMultiple(iterable $values, null|int|DateInterval $ttl = null): bool
     {

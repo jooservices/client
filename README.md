@@ -2,10 +2,11 @@
 
 A robust, layered HTTP Client wrapper designed for extensibility, strict typing, and high performance. Built with a "Clean Architecture" approach, decoupling the business logic from the underlying Guzzle transport.
 
+[![CI](https://github.com/jooservices/client/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/jooservices/client/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/jooservices/client/branch/develop/graph/badge.svg)](https://codecov.io/gh/jooservices/client)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jooservices/client/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jooservices/client)
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.5-blue)](https://php.net/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![PHPStan](https://img.shields.io/badge/PHPStan-level%209-success)](phpstan.neon)
-[![Coverage](https://img.shields.io/badge/Coverage-%3E%3D98%25-success)](docs/04-development/testing.md)
+[![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-enabled-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![Packagist](https://img.shields.io/packagist/v/jooservices/client)](https://packagist.org/packages/jooservices/client)
 [![Latest Release](https://img.shields.io/github/v/release/jooservices/client)](https://github.com/jooservices/client/releases)
@@ -100,17 +101,33 @@ $client = ClientBuilder::create()
 
 ## Quality Assurance
 
-We use strict static analysis and testing.
+The repository uses the DTO-style quality contract with a few client-specific additions.
 
 ```bash
-composer quality
+composer lint:all
+composer test
 ```
 
-This runs:
-- **Pint**: Code Style Fixer
-- **PHPStan**: Static Analysis (Level 9)
-- **PHPUnit**: Unit, Feature & Integration Tests (with 98% coverage gate)
-- **PHPBench**: Performance Analysis
+Additional validation commands:
+
+- `composer lint:fix`
+- `composer test:coverage`
+- `vendor/bin/phpbench run --report=default`
+
+Intentional client-specific differences from the DTO baseline:
+
+- 98% coverage gate on `composer test:coverage`
+- dedicated benchmark workflow with PHPBench
+- optional live-network workflow for real external IP logging checks
+- active CI secret scanning via `secret-scanning.yml`
+
+Repository-standard auxiliary automation now also matches DTO more closely:
+
+- semantic PR titles require an uppercase subject
+- pull requests are auto-labeled with DTO-style label categories
+- releases validate tags before publishing GitHub releases and can notify Packagist when credentials are configured
+
+Coverage remains an intentional client-specific divergence: this repo keeps a 98% gate and a narrower excluded-source set so the enforced threshold stays meaningful for the exercised client runtime surface.
 
 ## AI Development Workflow
 
@@ -123,8 +140,8 @@ This package includes AI-oriented scaffolding to keep delivery consistent with q
 When AI changes code, run:
 
 ```bash
-composer lint
-composer quality
+composer lint:all
+composer test
 ```
 
 ## Docker Development

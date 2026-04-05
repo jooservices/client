@@ -2,7 +2,7 @@
     "name": "jooservices/client",
     "description": "A robust, layered HTTP Client wrapper for JOOservices",
     "type": "library",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "license": "MIT",
     "authors": [
         {
@@ -22,12 +22,15 @@
     },
     "require-dev": {
         "captainhook/captainhook": "^5.25",
+        "captainhook/plugin-composer": "^5.3",
         "friendsofphp/php-cs-fixer": "^3.66",
         "laravel/pint": "^1.18",
         "mockery/mockery": "^1.6",
         "phpbench/phpbench": "^1.4",
         "phpmd/phpmd": "^2.15",
         "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^12.0",
         "squizlabs/php_codesniffer": "^3.10",
         "symfony/filesystem": "^7.4",
@@ -44,33 +47,64 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/phpunit && php scripts/coverage-check.php 98",
-        "test:unit": "vendor/bin/phpunit --group=unit",
-        "test:integration": "vendor/bin/phpunit --group=integration",
-        "test:arch": "vendor/bin/phpunit --group=arch",
-        "phpstan": "vendor/bin/phpstan analyse --memory-limit=512M",
-        "analyse": "@phpstan",
-        "phpcs": "vendor/bin/phpcs src tests",
-        "check:cs": "@phpcs",
-        "phpmd": "php -d error_reporting='E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED' vendor/bin/phpmd src text phpmd.xml",
-        "pint": "vendor/bin/pint --test",
-        "pint:fix": "vendor/bin/pint",
-        "fix:cs": "@pint:fix",
-        "format": "@pint:fix",
-        "lint": [
-            "@pint",
-            "@phpcs",
-            "@phpmd",
-            "@phpstan"
+        "test": "@php vendor/bin/phpunit",
+        "test:coverage": [
+            "@php vendor/bin/phpunit --coverage-html coverage --coverage-clover coverage/clover.xml",
+            "@php scripts/coverage-check.php 98"
         ],
-        "hook:install": "vendor/bin/captainhook install",
-        "quality": [
+        "test:unit": "@php vendor/bin/phpunit --group=unit",
+        "test:integration": "@php vendor/bin/phpunit --group=integration",
+        "test:arch": "@php vendor/bin/phpunit --group=arch",
+        "lint:pint": "@php vendor/bin/pint --test",
+        "lint:pint:fix": "@php vendor/bin/pint",
+        "lint:cs": "@php vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run --diff --sequential",
+        "lint:cs:fix": "@php vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --sequential",
+        "lint:phpcs": "@php vendor/bin/phpcs --standard=phpcs.xml",
+        "lint:phpstan": "@php vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=512M",
+        "lint:phpmd": "@php -d error_reporting='E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED' vendor/bin/phpmd src text phpmd.xml",
+        "lint": [
+            "@lint:pint",
+            "@lint:phpcs",
+            "@lint:phpstan"
+        ],
+        "lint:all": [
             "@lint",
+            "@lint:phpmd",
+            "@lint:cs"
+        ],
+        "lint:fix": [
+            "@lint:pint:fix",
+            "@lint:cs:fix"
+        ],
+        "phpstan": "@lint:phpstan",
+        "analyse": "@lint:phpstan",
+        "phpcs": "@lint:phpcs",
+        "check:cs": "@lint:phpcs",
+        "phpmd": "@lint:phpmd",
+        "pint": "@lint:pint",
+        "pint:fix": "@lint:pint:fix",
+        "fix:cs": "@lint:fix",
+        "format": "@lint:fix",
+        "hook:install": "vendor/bin/captainhook install",
+        "check": [
+            "@lint:all",
             "@test"
-        ]
+        ],
+        "ci": [
+            "@lint:all",
+            "@test:coverage"
+        ],
+        "quality": [
+            "@check"
+        ],
+        "post-install-cmd": "vendor/bin/captainhook install --force --skip-existing",
+        "post-update-cmd": "vendor/bin/captainhook install --force --skip-existing"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "captainhook/plugin-composer": true
+        }
     },
     "minimum-stability": "stable",
     "prefer-stable": true

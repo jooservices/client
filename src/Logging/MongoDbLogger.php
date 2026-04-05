@@ -13,6 +13,7 @@ use RuntimeException;
 use Stringable;
 use Throwable;
 
+/** @SuppressWarnings("PHPMD.ExcessiveClassComplexity") */
 final class MongoDbLogger implements LoggerInterface
 {
     private string $connection;
@@ -54,9 +55,7 @@ final class MongoDbLogger implements LoggerInterface
         $this->maxRequestBodyBytes = $maxRequestBodyBytes;
         $this->maxResponseBodyBytes = $maxResponseBodyBytes;
         $this->redactKeys = array_values(array_map(static fn (string $key): string => strtolower($key), $redactKeys));
-        $this->writer = $writer ?? function (array $document): void {
-            $this->persistViaModel($document);
-        };
+        $this->writer = $writer ?? $this->persistViaModel(...);
     }
 
     public function getConnection(): string
@@ -72,7 +71,7 @@ final class MongoDbLogger implements LoggerInterface
     /**
      * @param mixed $level
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function log($level, Stringable|string $message, array $context = []): void
     {
@@ -87,7 +86,7 @@ final class MongoDbLogger implements LoggerInterface
 
     /**
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function emergency(Stringable|string $message, array $context = []): void
     {
@@ -96,7 +95,7 @@ final class MongoDbLogger implements LoggerInterface
 
     /**
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function alert(Stringable|string $message, array $context = []): void
     {
@@ -105,7 +104,7 @@ final class MongoDbLogger implements LoggerInterface
 
     /**
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function critical(Stringable|string $message, array $context = []): void
     {
@@ -114,7 +113,7 @@ final class MongoDbLogger implements LoggerInterface
 
     /**
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function error(Stringable|string $message, array $context = []): void
     {
@@ -123,7 +122,7 @@ final class MongoDbLogger implements LoggerInterface
 
     /**
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function warning(Stringable|string $message, array $context = []): void
     {
@@ -132,7 +131,7 @@ final class MongoDbLogger implements LoggerInterface
 
     /**
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function notice(Stringable|string $message, array $context = []): void
     {
@@ -141,7 +140,7 @@ final class MongoDbLogger implements LoggerInterface
 
     /**
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function info(Stringable|string $message, array $context = []): void
     {
@@ -150,7 +149,7 @@ final class MongoDbLogger implements LoggerInterface
 
     /**
      * @param Stringable|string $message
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      */
     public function debug(Stringable|string $message, array $context = []): void
     {
@@ -158,7 +157,7 @@ final class MongoDbLogger implements LoggerInterface
     }
 
     /**
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      * @return array<string, mixed>
      */
     private function buildDocument(string $level, string $message, array $context): array
@@ -215,7 +214,7 @@ final class MongoDbLogger implements LoggerInterface
     }
 
     /**
-     * @param array<string, mixed> $context
+    * @param array<mixed> $context
      * @return array<string, mixed>
      */
     private function normalizeContext(array $context): array
@@ -223,7 +222,7 @@ final class MongoDbLogger implements LoggerInterface
         $normalized = [];
 
         foreach ($context as $key => $value) {
-            $normalized[$key] = $this->normalizeValue((string) $key, $value);
+            $normalized[(string) $key] = $this->normalizeValue((string) $key, $value);
         }
 
         return $normalized;

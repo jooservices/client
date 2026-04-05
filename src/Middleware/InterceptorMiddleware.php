@@ -21,12 +21,18 @@ class InterceptorMiddleware implements MiddlewareInterface
      */
     private array $responseInterceptors = [];
 
+    /**
+     * @param callable(RequestInterface, array<string, mixed>): RequestInterface $callback
+     */
     public function onRequest(callable $callback): self
     {
         $this->requestInterceptors[] = $callback;
         return $this;
     }
 
+    /**
+     * @param callable(ResponseInterface, array<string, mixed>): ResponseInterface $callback
+     */
     public function onResponse(callable $callback): self
     {
         $this->responseInterceptors[] = $callback;

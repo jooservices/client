@@ -1,0 +1,18 @@
+---
+description: Keep repository documentation aligned with the numbered DTO-style docs structure and valid local links
+globs:
+  - README.md
+  - CONTRIBUTING.md
+  - docs/**/*.md
+  - ai/**/*.md
+  - .claude/**/*.md
+  - .cursor/**/*.md
+  - antigravity/**/*.md
+  - jetbrains/**/*.md
+alwaysApply: false
+---
+
+- Keep documentation organized around the numbered structure under `docs/00-architecture` through `docs/04-development`.
+- Update related AI guidance files when logging behavior, MongoDB logging schema, or live-network diagnostics change.
+- Prefer fixing stale links and references immediately instead of leaving placeholder guidance behind.
+- After doc edits, verify relative Markdown links resolve locally.

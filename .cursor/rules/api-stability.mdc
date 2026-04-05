@@ -1,0 +1,11 @@
+---
+description: Preserve the public API and package identity for jooservices/client changes under src/
+globs:
+  - src/**/*.php
+alwaysApply: false
+---
+
+- Preserve public API compatibility unless the task explicitly requires a breaking change.
+- Keep the package identity intact: layered HTTP client, middleware pipeline, structured logging, and MongoDB logging support.
+- Prefer minimal diffs that solve the root problem without rewriting unaffected modules.
+- Do not remove runtime assets or contract-level abstractions to satisfy local tests.

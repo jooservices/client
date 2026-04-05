@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JOOservices\Client\Contracts;
 
 use GuzzleHttp\Promise\PromiseInterface;
+use Psr\Http\Message\RequestInterface;
 
 interface AsyncHttpClientInterface
 {
@@ -36,8 +37,7 @@ interface AsyncHttpClientInterface
     /**
      * Execute multiple requests concurrently.
      *
-     * @param iterable<array-key, \Closure|PromiseInterface> $requests Iterable of keys to Closures returning Promises
-     *                                                                 or Promises directly.
+     * @param iterable<array-key, PromiseInterface|RequestInterface|callable(): PromiseInterface> $requests
      * @param int $concurrency Maximum number of concurrent requests.
      * @return array<array-key, mixed> Array of results keyed by the input keys.
      */

@@ -1,0 +1,19 @@
+---
+description: Require the standard validation gates before completing jooservices/client changes
+globs:
+  - composer.json
+  - phpcs.xml
+  - phpmd.xml
+  - phpstan.neon
+  - phpunit.xml
+  - src/**/*.php
+  - tests/**/*.php
+  - docs/**/*.md
+  - .github/workflows/**/*.yml
+alwaysApply: false
+---
+
+- Before finalizing code changes, run `composer lint` and `composer quality`.
+- If documentation changed, also run the docs verification workflow documented in `.claude/commands/docs-verify.md`.
+- If coverage-sensitive behavior changed, run `composer test:coverage` and call out any intentional divergence from DTO.
+- If a required check cannot be run, state that clearly in the final handoff.
