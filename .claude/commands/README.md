@@ -1,18 +1,16 @@
 # Claude Commands
 
-Custom command definitions for repository-specific tasks can be added here.
+Repository-specific command playbooks for Claude workflows.
 
-## Current Status
+## Available Commands
 
-No custom command files are committed yet.
+- `quality-check.md`: final validation flow for code changes.
+- `docs-verify.md`: markdown-link and docs-structure verification.
+- `release-readiness.md`: release preflight checks.
 
-## Recommended Command Set
+## Usage Notes
 
-- `quality-check.md`: run `composer lint` and `composer quality`.
-- `docs-verify.md`: verify documentation links and numbered index consistency.
-- `release-readiness.md`: check release workflow preconditions.
+- Keep commands aligned with [AGENTS.md](../../AGENTS.md) and [CLAUDE.md](../../CLAUDE.md).
+- Prefer the repository's existing Composer entry points over ad hoc shell replacements.
+- When docs change, use [docs-verify.md](docs-verify.md) to check relative Markdown links.
 
-## Notes
-
-- Keep commands aligned with `AGENTS.md` and `CLAUDE.md` requirements.
-- Prefer commands that invoke existing composer scripts to avoid drift.

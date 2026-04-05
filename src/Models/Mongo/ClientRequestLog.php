@@ -8,7 +8,7 @@ use MongoDB\Laravel\Eloquent\Model;
 
 final class ClientRequestLog extends Model
 {
-    /** @var string */
+    /** @var string|\UnitEnum|null */
     protected $connection = 'mongodb';
 
     /** @var string */
@@ -39,9 +39,6 @@ final class ClientRequestLog extends Model
         'logged_at',
     ];
 
-    /**
-     * @var array<string, string>
-     */
     protected $casts = [
         'status' => 'integer',
         'duration_ms' => 'float',

@@ -3,19 +3,78 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  discussions: write
+
+env:
+  PHP_VERSION: '8.5'
 
 jobs:
-  release:
+  validate:
+    name: Validate Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, json
+          coverage: none
+
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@v4
+
+      - name: Run tests
+        run: composer test
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe
+        uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          discussion_category_name: Releases
+
+  publish:
+    name: Publish to Packagist
+    runs-on: ubuntu-latest
+    needs: [release]
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-')
+
+    steps:
+      - name: Trigger Packagist Update
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: |
+          if [[ -z "$PACKAGIST_USERNAME" || -z "$PACKAGIST_TOKEN" ]]; then
+            echo "Packagist credentials not configured; skipping publish step."
+            exit 0
+          fi
+
+          curl -XPOST \
+            -H 'content-type:application/json' \
+            "https://packagist.org/api/update-package?username=$PACKAGIST_USERNAME" \
+            -d "{\"repository\":{\"url\":\"https://packagist.org/packages/jooservices/client\"},\"api_token\":\"$PACKAGIST_TOKEN\"}"

@@ -1,13 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.0/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="depends,defects"
+         shortenArraysForExportThreshold="10"
+         requireCoverageMetadata="false"
+         beStrictAboutCoverageMetadata="true"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         failOnIncomplete="true"
+         failOnSkipped="false"
+         failOnEmptyTestSuite="true"
+         failOnDeprecation="true"
+         failOnPhpunitDeprecation="true"
+         failOnNotice="true"
+         displayDetailsOnIncompleteTests="true"
+         displayDetailsOnSkippedTests="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true"
+         displayDetailsOnTestsThatTriggerErrors="true"
+         displayDetailsOnTestsThatTriggerNotices="true"
+         displayDetailsOnTestsThatTriggerWarnings="true"
          colors="true"
-         cacheDirectory=".phpunit.cache">
-    <php>
-        <env name="MONGODB_URI" value="mongodb://127.0.0.1:27017"/>
-        <env name="MONGODB_DATABASE" value="jooclient_test"/>
-    </php>
+         testdox="true"
+         stopOnFailure="false"
+         stopOnError="false">
     <testsuites>
         <testsuite name="Unit">
             <directory suffix="Test.php">tests/Unit</directory>
@@ -37,11 +55,23 @@
             <file>src/Support/CachedExternalWanIpProvider.php</file>
         </exclude>
     </source>
-    <coverage>
+    <coverage includeUncoveredFiles="true"
+              pathCoverage="false"
+              ignoreDeprecatedCodeUnits="true">
         <report>
             <html outputDirectory="coverage"/>
-            <text outputFile="php://stdout"/>
+            <text outputFile="php://stdout" showOnlySummary="true"/>
             <clover outputFile="coverage/clover.xml"/>
         </report>
     </coverage>
+
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="MONGODB_URI" value="mongodb://127.0.0.1:27017"/>
+        <env name="MONGODB_DATABASE" value="jooclient_test"/>
+        <ini name="memory_limit" value="512M"/>
+        <ini name="error_reporting" value="-1"/>
+        <ini name="display_errors" value="On"/>
+        <ini name="display_startup_errors" value="On"/>
+    </php>
 </phpunit>

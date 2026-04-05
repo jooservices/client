@@ -28,7 +28,7 @@ class AsyncTest extends TestCase
             ->withOption('handler', $handler)
             ->build();
 
-        /** @var AsyncHttpClientInterface $client */
+        $this->assertInstanceOf(AsyncHttpClientInterface::class, $client);
         $promise = $client->getAsync('/test');
 
         $this->assertInstanceOf(PromiseInterface::class, $promise);
@@ -52,7 +52,7 @@ class AsyncTest extends TestCase
             ->withOption('handler', $handler)
             ->build();
 
-        /** @var AsyncHttpClientInterface $client */
+        $this->assertInstanceOf(AsyncHttpClientInterface::class, $client);
         $results = $client->batch([
             'r1' => fn () => $client->getAsync('/1'),
             'r2' => fn () => $client->getAsync('/2'),
@@ -75,7 +75,7 @@ class AsyncTest extends TestCase
             ->withOption('handler', $handler)
             ->build();
 
-        /** @var AsyncHttpClientInterface $client */
+        $this->assertInstanceOf(AsyncHttpClientInterface::class, $client);
         $results = $client->batch([
             'r1' => new \GuzzleHttp\Psr7\Request('GET', 'http://example.com/1'),
             'r2' => new \GuzzleHttp\Psr7\Request('GET', 'http://example.com/2'),
@@ -97,7 +97,7 @@ class AsyncTest extends TestCase
             ->withOption('handler', $handler)
             ->build();
 
-        /** @var AsyncHttpClientInterface $client */
+        $this->assertInstanceOf(AsyncHttpClientInterface::class, $client);
         $promise = $client->postAsync('/users', [
             'json' => ['name' => 'John Doe', 'email' => 'john@example.com'],
         ]);
@@ -121,7 +121,7 @@ class AsyncTest extends TestCase
             ->withOption('handler', $handler)
             ->build();
 
-        /** @var AsyncHttpClientInterface $client */
+        $this->assertInstanceOf(AsyncHttpClientInterface::class, $client);
         $promise = $client->requestAsync('PUT', '/users/456', [
             'json' => ['name' => 'Jane Doe'],
         ]);
@@ -145,7 +145,7 @@ class AsyncTest extends TestCase
             ->withOption('handler', $handler)
             ->build();
 
-        /** @var AsyncHttpClientInterface $client */
+        $this->assertInstanceOf(AsyncHttpClientInterface::class, $client);
         $promise = $client->requestAsync('PATCH', '/resources/789', [
             'json' => ['status' => 'active'],
         ]);
@@ -169,7 +169,7 @@ class AsyncTest extends TestCase
             ->withOption('handler', $handler)
             ->build();
 
-        /** @var AsyncHttpClientInterface $client */
+        $this->assertInstanceOf(AsyncHttpClientInterface::class, $client);
         $promise = $client->requestAsync('DELETE', '/resources/999');
 
         $this->assertInstanceOf(PromiseInterface::class, $promise);
@@ -192,7 +192,7 @@ class AsyncTest extends TestCase
             ->withOption('handler', $handler)
             ->build();
 
-        /** @var AsyncHttpClientInterface $client */
+        $this->assertInstanceOf(AsyncHttpClientInterface::class, $client);
         $results = $client->batch([
             'get1' => fn () => $client->getAsync('/item/1'),
             'post' => fn () => $client->postAsync('/items', ['json' => ['name' => 'New Item']]),

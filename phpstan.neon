@@ -1,9 +1,172 @@
+includes:
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+    - phpstan-baseline.neon
+
 parameters:
-    level: 9
+    level: max
     paths:
         - src
+        - tests
     treatPhpDocTypesAsCertain: false
-
-includes:
-    - phpstan-baseline.neon
+    reportUnmatchedIgnoredErrors: true
+    checkMissingCallableSignature: true
+    checkUninitializedProperties: true
+    checkDynamicProperties: true
+    polluteScopeWithLoopInitialAssignments: false
+    polluteScopeWithAlwaysIterableForeach: false
+    checkExplicitMixedMissingReturn: true
+    checkFunctionNameCase: true
+    checkInternalClassCaseSensitivity: true
+    reportMaybesInMethodSignatures: true
+    reportStaticMethodSignatures: true
+    reportMaybesInPropertyPhpDocTypes: true
+    reportWrongPhpDocTypeInVarTag: true
+    exceptions:
+        implicitThrows: false
+        check:
+            missingCheckedExceptionInThrows: false
+            tooWideThrowType: false
+    ignoreErrors:
+        - '#Dynamic call to static method PHPUnit\\Framework\\Assert::#'
+        -
+            message: '#will always evaluate to true#'
+            paths:
+                - tests/*
+        -
+            message: '#Cannot access offset .* on mixed#'
+            paths:
+                - tests/*
+        -
+            message: '#Property .* is never read, only written#'
+            paths:
+                - tests/*
+        -
+            message: '#Dead catch#'
+            paths:
+                - tests/*
+        -
+            message: '#never returns .* so it can be removed from the return type#'
+            paths:
+                - tests/*
+        -
+            message: '#expects array<mixed>|ArrayAccess#'
+            paths:
+                - tests/*
+        -
+            message: '#has parameter .* with no value type specified in iterable type array#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter .* of (method|function) .* expects string, string\|false given#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#1 \$values .*FilesystemCache::setMultiple\(\) should be contravariant#'
+            paths:
+                - src/Cache/FilesystemCache.php
+        -
+            message: '#Parameter \#1 \$values .*MemoryCache::setMultiple\(\) should be contravariant#'
+            paths:
+                - src/Cache/MemoryCache.php
+        -
+            message: '#Cannot call method (json|status)\(\) on mixed#'
+            paths:
+                - tests/*
+        -
+            message: '#Cannot cast mixed to string#'
+            paths:
+                - tests/*
+        -
+            message: '#Call to an undefined method Illuminate\\Database\\Connection::getMongoDB\(\)#'
+            paths:
+                - tests/*
+        -
+            message: '#Cannot call method command\(\) on mixed#'
+            paths:
+                - tests/*
+        -
+            message: '#Dynamic call to static method .*#'
+            paths:
+                - tests/*
+        -
+            message: '#Static call to instance method .*#'
+            paths:
+                - tests/*
+        -
+            message: '#Only booleans are allowed in a negated boolean, string\|false given#'
+            paths:
+                - tests/*
+        -
+            message: '#Method .* has parameter .* with no type specified#'
+            paths:
+                - tests/*
+        -
+            message: '#Cannot call method (hasHeader|getHeader)\(\) on .*\|null#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#1 \$client of class .* expects GuzzleHttp\\ClientInterface, Mockery\\MockInterface given#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#1 \$.* of (class|method) .*Mockery\\MockInterface given#'
+            paths:
+                - tests/*
+        -
+            message: '#Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage::(andReturn|atLeast)\(\)#'
+            paths:
+                - tests/*
+        -
+            message: '#Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage::.*#'
+            paths:
+                - tests/*
+        -
+            message: '#Cannot call method times\(\) on mixed#'
+            paths:
+                - tests/*
+        -
+            message: '#Cannot call method .* on mixed#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#1 \$haystack of function str_contains expects string, mixed given#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#2 \$array of function array_key_exists expects array, mixed given#'
+            paths:
+                - tests/*
+        -
+            message: '#Call to method PHPUnit\\Framework\\Assert::assertTrue\(\) with false will always evaluate to false#'
+            paths:
+                - tests/*
+        -
+            message: '#Cannot access offset 0 on list<string>\|false#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#3 \$body of class GuzzleHttp\\Psr7\\Response constructor expects .* string\|false given#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#1 \$dtoClass of method .*ResponseWrapper::toDto\(\) expects class-string<.*>, string given#'
+            paths:
+                - tests/*
+        -
+            message: '#Cannot cast mixed to int#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#1 \$baseOptions of method .*OptionsMerger::merge\(\) expects array<string, mixed>, array<int\|string, string> given#'
+            paths:
+                - tests/*
+        -
+            message: '#Parameter \#2 \$requestOptions of method .*OptionsMerger::merge\(\) expects array<string, mixed>, array<int\|string, string> given#'
+            paths:
+                - tests/*
+        -
+            message: '#Property JOOservices\\Client\\Models\\Mongo\\ClientRequestLog::\$casts type has no value type specified in iterable type array#'
+            paths:
+                - src/Models/Mongo/ClientRequestLog.php
 

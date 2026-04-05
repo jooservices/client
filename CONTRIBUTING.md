@@ -19,16 +19,20 @@ We adhere to strict coding standards to ensure high quality and maintainability.
 5.  **Develop** your changes.
 6.  **Run Quality Checks**: Ensure everything passes before pushing.
     ```bash
-    composer quality
+    composer lint:fix
+    composer lint:all
+    composer test
     ```
-    This runs:
-    - Pint (Linting)
-    - PHPStan (Static Analysis)
-    - PHPUnit (Tests)
-    - PHPBench (Performance)
+    Use `composer test:coverage` when you need the enforced 98% coverage gate.
 
-7.  **Commit**: Use descriptive commit messages.
+7.  **Commit**: Use Conventional Commit messages such as `feat(http): Add retry header propagation`.
 8.  **Push** and **Create Pull Request**.
+
+## Hooks
+
+- `composer install` auto-installs CaptainHook hooks.
+- Pre-commit runs PHP linting, `gitleaks protect --staged`, `composer lint:pint`, `composer lint:phpcs`, and `composer lint:phpstan`.
+- Pre-push runs `composer test` and an unpushed-commits gitleaks scan when `gitleaks` is available locally.
 
 ## Testing
 
@@ -39,6 +43,7 @@ We use a "Real Component" testing strategy:
 Run tests:
 ```bash
 composer test
+composer test:coverage
 ```
 
 ## Security

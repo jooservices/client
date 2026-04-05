@@ -6,6 +6,7 @@ namespace JOOservices\Client\Middleware;
 
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\FulfilledPromise;
+use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Promise\RejectedPromise;
 use JOOservices\Client\Contracts\MiddlewareInterface;
 use Psr\Http\Message\RequestInterface;
@@ -87,14 +88,18 @@ class MiddlewarePipeline
 
             $middleware = $this->middlewares[$name];
 
-            // Convert our MiddlewareInterface to Guzzle Middleware
             $guzzleMiddleware = function (callable $handler) use ($middleware) {
+                /**
+                 * @param array<string, mixed> $options
+                 */
                 return function (RequestInterface $request, array $options) use ($handler, $middleware) {
-                    // Wrap handler to resolve promises (supports both sync and async)
+                    /**
+                     * @param array<string, mixed> $opts
+                     */
                     $nextClosure = function (RequestInterface $req, array $opts) use ($handler): ResponseInterface {
                         $result = $handler($req, $opts);
 
-                        if ($result instanceof \GuzzleHttp\Promise\PromiseInterface) {
+                        if ($result instanceof PromiseInterface) {
                             $resolved = $result->wait();
                             if ($resolved instanceof ResponseInterface) {
                                 return $resolved;
@@ -111,7 +116,7 @@ class MiddlewarePipeline
                     };
 
                     try {
-                        $response = $middleware($request, $options, $nextClosure);
+                        $response = $middleware($request, $this->normalizeOptions($options), $nextClosure);
                         return new FulfilledPromise($response);
                     } catch (\Throwable $e) {
                         return new RejectedPromise($e);
@@ -123,5 +128,20 @@ class MiddlewarePipeline
         }
 
         return $stack;
+    }
+
+    /**
+     * @param array<mixed> $options
+     * @return array<string, mixed>
+     */
+    private function normalizeOptions(array $options): array
+    {
+        $normalized = [];
+
+        foreach ($options as $key => $value) {
+            $normalized[(string) $key] = $value;
+        }
+
+        return $normalized;
     }
 }

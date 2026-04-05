@@ -17,6 +17,7 @@ use JOOservices\Client\Support\OptionsMerger;
 use JOOservices\Client\Support\TransferStatsBag;
 use JOOservices\Client\ValueObjects\ClientConfig;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientInterface
 {
@@ -85,7 +86,11 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
         $request = new Request($method, $uri);
 
         return $this->adapter->sendAsync($request, $finalOptions)
-            ->then(function ($response) {
+            ->then(function (mixed $response): ResponseWrapper {
+                if (!$response instanceof ResponseInterface) {
+                    throw new InvalidArgumentException('Async adapter resolved to a non-response value.');
+                }
+
                 return new ResponseWrapper($response);
             });
     }
@@ -142,23 +147,7 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
 
         $generator = function () use ($requests) {
             foreach ($requests as $key => $r) {
-                $promise = null;
-                if ($r instanceof PromiseInterface) {
-                    $promise = $r;
-                } elseif ($r instanceof RequestInterface) {
-                    $options = [];
-                    $headers = $r->getHeaders();
-                    if ($headers !== []) {
-                        $options['headers'] = $headers;
-                    }
-                    $body = (string) $r->getBody();
-                    if ($body !== '') {
-                        $options['body'] = $body;
-                    }
-                    $promise = $this->requestAsync($r->getMethod(), (string) $r->getUri(), $options);
-                } elseif (is_callable($r)) {
-                    $promise = $r();
-                }
+                $promise = $this->resolveBatchPromise($r);
 
                 if (!$promise instanceof PromiseInterface) {
                     throw new InvalidArgumentException(
@@ -167,33 +156,82 @@ final readonly class HttpClient implements HttpClientInterface, AsyncHttpClientI
                     );
                 }
 
-                // Wrap to preserve key and handle success/failure
-                yield $key => $promise->then(
-                    function ($value) use ($key) {
-                        return ['key' => $key, 'value' => $value, 'state' => 'fulfilled'];
-                    },
-                    function ($reason) use ($key) {
-                        return ['key' => $key, 'value' => $reason, 'state' => 'rejected'];
-                    }
-                );
+                yield $key => $this->wrapBatchPromise($promise, $key);
             }
         };
 
         $promise = \GuzzleHttp\Promise\Each::ofLimit(
             $generator(),
             $concurrency,
-            function ($wrapped, $idx) use (&$results) {
-                if (isset($wrapped['key'])) {
-                    $results[$wrapped['key']] = $wrapped['value'];
-                }
+            function (mixed $wrapped) use (&$results): void {
+                $this->storeWrappedResult($results, $wrapped);
             },
-            function ($reason, $idx) {
-                // Should not happen as we catch rejections in the wrapper.
+            function (mixed $reason): void {
+                unset($reason);
             }
         );
 
         $promise->wait();
 
         return $results;
+    }
+
+    private function resolveBatchPromise(mixed $request): ?PromiseInterface
+    {
+        if ($request instanceof PromiseInterface) {
+            return $request;
+        }
+
+        if ($request instanceof RequestInterface) {
+            $options = [];
+            $headers = $request->getHeaders();
+            if ($headers !== []) {
+                $options['headers'] = $headers;
+            }
+
+            $body = (string) $request->getBody();
+            if ($body !== '') {
+                $options['body'] = $body;
+            }
+
+            return $this->requestAsync($request->getMethod(), (string) $request->getUri(), $options);
+        }
+
+        if (is_callable($request)) {
+            $promise = $request();
+
+            return $promise instanceof PromiseInterface ? $promise : null;
+        }
+
+        return null;
+    }
+
+    private function wrapBatchPromise(PromiseInterface $promise, int|string $key): PromiseInterface
+    {
+        return $promise->then(
+            static function (mixed $value) use ($key): array {
+                return ['key' => $key, 'value' => $value, 'state' => 'fulfilled'];
+            },
+            static function (mixed $reason) use ($key): array {
+                return ['key' => $key, 'value' => $reason, 'state' => 'rejected'];
+            }
+        );
+    }
+
+    /**
+     * @param array<array-key, mixed> $results
+     */
+    private function storeWrappedResult(array &$results, mixed $wrapped): void
+    {
+        if (!is_array($wrapped) || !array_key_exists('key', $wrapped)) {
+            return;
+        }
+
+        $key = $wrapped['key'];
+        if (!is_int($key) && !is_string($key)) {
+            return;
+        }
+
+        $results[$key] = $wrapped['value'] ?? null;
     }
 }

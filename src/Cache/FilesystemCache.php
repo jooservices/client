@@ -38,39 +38,14 @@ class FilesystemCache implements CacheInterface
             return $default;
         }
 
-        $content = file_get_contents($filename);
-        if ($content === false) {
+        $data = $this->readCachePayload($filename);
+        if ($data === null) {
             return $default;
         }
 
-        // Decode JSON data
-        try {
-            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            // JSON decode failed - corrupted cache
-            unlink($filename);
+        $expiresAt = $this->parseExpiresAt($filename, $data['expiresAt']);
+        if ($expiresAt === false) {
             return $default;
-        }
-
-        if (!is_array($data) || !array_key_exists('expiresAt', $data) || !array_key_exists('value', $data)) {
-            unlink($filename);
-            return $default;
-        }
-
-        // Reconstruct DateTimeImmutable from ISO 8601 string
-        $expiresAt = null;
-        $expiresAtRaw = $data['expiresAt'];
-        if ($expiresAtRaw !== null) {
-            if (!is_string($expiresAtRaw) || $expiresAtRaw === '') {
-                unlink($filename);
-                return $default;
-            }
-            try {
-                $expiresAt = new DateTimeImmutable($expiresAtRaw);
-            } catch (\Exception $e) {
-                unlink($filename);
-                return $default;
-            }
         }
 
         if ($expiresAt !== null && $expiresAt < new DateTimeImmutable()) {
@@ -79,6 +54,54 @@ class FilesystemCache implements CacheInterface
         }
 
         return $data['value'];
+    }
+
+    /**
+     * @return array{expiresAt: mixed, value: mixed}|null
+     */
+    private function readCachePayload(string $filename): ?array
+    {
+        $content = file_get_contents($filename);
+        if ($content === false) {
+            return null;
+        }
+
+        try {
+            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            unlink($filename);
+
+            return null;
+        }
+
+        if (!is_array($data) || !array_key_exists('expiresAt', $data) || !array_key_exists('value', $data)) {
+            unlink($filename);
+
+            return null;
+        }
+
+        return $data;
+    }
+
+    private function parseExpiresAt(string $filename, mixed $expiresAtRaw): DateTimeImmutable|false|null
+    {
+        if ($expiresAtRaw === null) {
+            return null;
+        }
+
+        if (!is_string($expiresAtRaw) || $expiresAtRaw === '') {
+            unlink($filename);
+
+            return false;
+        }
+
+        try {
+            return new DateTimeImmutable($expiresAtRaw);
+        } catch (\Exception) {
+            unlink($filename);
+
+            return false;
+        }
     }
 
     public function set(string $key, mixed $value, null|int|DateInterval $ttl = null): bool
@@ -141,8 +164,7 @@ class FilesystemCache implements CacheInterface
     }
 
     /**
-     * @param iterable<string, mixed> $values
-     * @param int|DateInterval|null $ttl
+     * @param iterable<array-key, mixed> $values
      */
     public function setMultiple(iterable $values, null|int|DateInterval $ttl = null): bool
     {

@@ -7,6 +7,7 @@ namespace JOOservices\Client\Client;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\HandlerStack;
 use JOOservices\Client\Adapters\Guzzle\GuzzleHttpClientAdapter;
+use JOOservices\Client\Contracts\AsyncHttpClientInterface;
 use JOOservices\Client\Contracts\HttpClientInterface;
 use JOOservices\Client\Contracts\MiddlewareInterface;
 use JOOservices\Client\Contracts\TransportAdapterInterface;
@@ -26,9 +27,12 @@ use JOOservices\Client\Resilience\RetryConfig;
 use JOOservices\Client\Resilience\Storage\InMemoryStateStore;
 use JOOservices\Client\Support\CachedExternalWanIpProvider;
 use JOOservices\Client\ValueObjects\ClientConfig;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 
+/** @SuppressWarnings("PHPMD.ExcessivePublicCount") */
 final class ClientBuilder
 {
     private string $baseUri = '';
@@ -150,12 +154,18 @@ final class ClientBuilder
         return $this->withMiddleware(new UserAgentMiddleware($userAgent), 'user_agent');
     }
 
+    /**
+     * @param callable(RequestInterface, array<string, mixed>): RequestInterface $callback
+     */
     public function onRequest(callable $callback): self
     {
         $this->getInterceptorMiddleware()->onRequest($callback);
         return $this;
     }
 
+    /**
+     * @param callable(ResponseInterface, array<string, mixed>): ResponseInterface $callback
+     */
     public function onResponse(callable $callback): self
     {
         $this->getInterceptorMiddleware()->onResponse($callback);
@@ -224,9 +234,8 @@ final class ClientBuilder
         return $this->interceptor;
     }
 
-    public function build(): HttpClientInterface
+    public function build(): HttpClientInterface&AsyncHttpClientInterface
     {
-        // 1. Create Config
         $config = new ClientConfig(
             baseUri: $this->baseUri,
             timeout: $this->timeout,
@@ -237,51 +246,64 @@ final class ClientBuilder
             options: $this->options
         );
 
-        // 2. Create Adapter (Default to Guzzle)
-        $adapter = $this->adapter;
-        if ($adapter === null) {
-            // Phase 2: Middleware Pipeline
-            $handlerStack = null;
+        $adapter = $this->adapter ?? $this->createDefaultAdapter();
 
-            // If user passed a handler, we use it as the base/root of the stack.
-            // But HandlerStack::create($handler) wraps it.
-            // If passed as option 'handler', it might be a HandlerStack OR a callable.
+        return new HttpClient($adapter, $config);
+    }
 
-            $userHandler = $this->options['handler'] ?? null;
-            unset($this->options['handler']); // consume it so we can set the built one
+    private function createDefaultAdapter(): TransportAdapterInterface
+    {
+        $guzzleOptions = $this->options;
+        $guzzleOptions['handler'] = $this->createHandlerStack($guzzleOptions);
+        $guzzleOptions['headers'] = $this->normalizeHeaders($guzzleOptions['headers'] ?? []);
 
-            if ($userHandler instanceof HandlerStack) {
-                $handlerStack = $userHandler;
-            } elseif (is_callable($userHandler)) {
-                $handlerStack = HandlerStack::create($userHandler);
-            } else {
-                $handlerStack = HandlerStack::create();
-            }
+        $guzzle = new GuzzleClient($guzzleOptions);
 
-            if ($this->pipeline !== null) {
-                // Determine base stack (user provided or default)
-                // We pass this stack to pipeline build
-                $handlerStack = $this->pipeline->buildHandlerStack($handlerStack);
-            }
+        return new GuzzleHttpClientAdapter($guzzle);
+    }
 
-            $guzzleOptions = $this->options;
-            $guzzleOptions['handler'] = $handlerStack;
+    /**
+     * @param array<string, mixed> $guzzleOptions
+     */
+    private function createHandlerStack(array &$guzzleOptions): HandlerStack
+    {
+        $userHandler = $guzzleOptions['handler'] ?? null;
+        unset($guzzleOptions['handler']);
 
-            // Prevent Guzzle from forcing its default User-Agent so our Middleware can handle it
-            $headers = $guzzleOptions['headers'] ?? [];
-            if (!is_array($headers)) {
-                $headers = [];
-            }
-            if (!isset($headers['User-Agent'])) {
-                $headers['User-Agent'] = '';
-            }
-            $guzzleOptions['headers'] = $headers;
-
-            $guzzle = new GuzzleClient($guzzleOptions);
-            $adapter = new GuzzleHttpClientAdapter($guzzle);
+        if ($userHandler instanceof HandlerStack) {
+            $handlerStack = $userHandler;
+        } elseif (is_callable($userHandler)) {
+            $handlerStack = HandlerStack::create($userHandler);
+        } else {
+            $handlerStack = HandlerStack::create();
         }
 
-        // 3. Create Client
-        return new HttpClient($adapter, $config);
+        if ($this->pipeline !== null) {
+            return $this->pipeline->buildHandlerStack($handlerStack);
+        }
+
+        return $handlerStack;
+    }
+
+    /**
+     * @param mixed $headers
+     * @return array<string, mixed>
+     */
+    private function normalizeHeaders(mixed $headers): array
+    {
+        if (!is_array($headers)) {
+            $headers = [];
+        }
+
+        $normalized = [];
+        foreach ($headers as $name => $value) {
+            $normalized[(string) $name] = $value;
+        }
+
+        if (!isset($normalized['User-Agent'])) {
+            $normalized['User-Agent'] = '';
+        }
+
+        return $normalized;
     }
 }

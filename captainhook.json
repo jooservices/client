@@ -1,12 +1,40 @@
 {
+    "$schema": "https://captainhookphp.github.io/captainhook/schema.json",
     "config": {
         "run-mode": "php"
+    },
+    "commit-msg": {
+        "enabled": true,
+        "actions": [
+            {
+                "action": "\\CaptainHook\\App\\Hook\\Message\\Action\\Regex",
+                "options": {
+                    "regex": "/^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\\(.+\\))?!?:\\s.{1,100}$/",
+                    "error": "Commit message must follow Conventional Commits format: <type>(<scope>): <description>"
+                }
+            }
+        ]
     },
     "pre-commit": {
         "enabled": true,
         "actions": [
             {
-                "action": "composer lint"
+                "action": "\\CaptainHook\\App\\Hook\\PHP\\Action\\Linting",
+                "options": {
+                    "extensions": "php"
+                }
+            },
+            {
+                "action": "echo 'Scanning staged changes for secrets...' && gitleaks protect --staged --verbose --redact --config=.gitleaks.toml"
+            },
+            {
+                "action": "echo 'Running Pint...' && composer lint:pint"
+            },
+            {
+                "action": "echo 'Running PHPCS...' && composer lint:phpcs"
+            },
+            {
+                "action": "echo 'Running PHPStan...' && composer lint:phpstan"
             }
         ]
     },
@@ -14,7 +42,10 @@
         "enabled": true,
         "actions": [
             {
-                "action": "composer quality"
+                "action": "echo 'Scanning unpushed commits for secrets...' && gitleaks detect --verbose --redact --config=.gitleaks.toml --log-opts=\"origin/main..HEAD\" || echo 'Note: install gitleaks locally to enable pre-push secret scans'"
+            },
+            {
+                "action": "echo 'Running tests...' && composer test"
             }
         ]
     }

@@ -24,7 +24,9 @@ final class ResponseWrapper implements ResponseWrapperInterface
 
     public function header(string $name): ?string
     {
-        return $this->response->getHeaderLine($name) ?: null;
+        $header = $this->response->getHeaderLine($name);
+
+        return $header === '' ? null : $header;
     }
 
     public function json(): array
@@ -53,6 +55,11 @@ final class ResponseWrapper implements ResponseWrapperInterface
         return $this->response;
     }
 
+    /**
+     * @template T of object
+     * @param class-string<T> $dtoClass
+     * @return T
+     */
     public function toDto(string $dtoClass): object
     {
         if (! class_exists($dtoClass)) {
@@ -65,6 +72,12 @@ final class ResponseWrapper implements ResponseWrapperInterface
             throw new InvalidArgumentException("DTO class $dtoClass must have a static from() method");
         }
 
-        return $dtoClass::from($this->json());
+        $dto = $dtoClass::from($this->json());
+        if (!is_object($dto)) {
+            throw new InvalidArgumentException("DTO class $dtoClass::from() must return an object");
+        }
+
+        /** @var T $dto */
+        return $dto;
     }
 }
