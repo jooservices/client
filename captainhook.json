@@ -48,7 +48,7 @@
         "enabled": true,
         "actions": [
             {
-                "action": "echo 'Scanning unpushed commits for secrets...' && BASE_REF=$(git rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/@@') && gitleaks detect --verbose --redact --config=.gitleaks.toml --log-opts=\"${BASE_REF}..HEAD\" || echo 'Note: install gitleaks locally to enable pre-push secret scans'"
+                "action": "echo 'Scanning unpushed commits for secrets...' && if command -v gitleaks >/dev/null 2>&1; then BASE_REF=$(git rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/@@') && gitleaks detect --verbose --redact --config=.gitleaks.toml --log-opts=\"${BASE_REF}..HEAD\"; else echo 'Note: install gitleaks locally to enable pre-push secret scans'; fi"
             },
             {
                 "action": "echo 'Running tests...' && composer test"

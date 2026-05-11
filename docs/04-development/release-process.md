@@ -10,7 +10,7 @@
 1. Start from the latest `develop` branch.
 2. Create `release/<version>` from `develop`.
 3. Limit release-branch changes to changelog, release metadata, workflow-safe fixes, and final stabilization.
-4. Run `composer lint:all`, `composer test`, `composer test:coverage`, and `composer ci`.
+4. Run `composer check` and `composer ci`.
 5. Open the release PR from `release/<version>` into `master`.
 6. Merge the approved release PR into `master`.
 7. Create and push the `vX.Y.Z` tag from `master`.

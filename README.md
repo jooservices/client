@@ -106,10 +106,10 @@ Request and response body logging should stay opt-in. Keep `logBodies: false` un
 The repository uses the DTO-style quality contract with a few client-specific additions.
 
 ```bash
-composer lint:all
-composer test
 composer check
 ```
+
+Run `composer lint:all` and `composer test` directly when you want the underlying steps separately; use `composer check` for the standard combined gate.
 
 Additional validation commands:
 
@@ -144,8 +144,6 @@ This package includes AI-oriented scaffolding to keep delivery consistent with q
 When AI changes code, run:
 
 ```bash
-composer lint:all
-composer test
 composer check
 ```
 

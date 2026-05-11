@@ -2,7 +2,7 @@
 
 Documentation is organized with DTO-aligned indexing while preserving client-specific content.
 
-The package name is `jooservices/client`. The PHP namespace is `JOOservices\\Client\\`.
+The package name is `jooservices/client`. The PHP namespace is `JOOservices\Client\`.
 
 ## Documentation Structure
 

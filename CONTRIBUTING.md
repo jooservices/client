@@ -18,7 +18,7 @@ We adhere to strict coding standards to ensure high quality and maintainability.
 4.  **Sync Develop**: `git checkout develop && git pull --ff-only origin develop`
 5.  **Create a Branch**: `git checkout -b feature/my-new-feature`
 6.  **Develop** your changes.
-6.  **Run Quality Checks**: Ensure everything passes before pushing.
+7.  **Run Quality Checks**: Ensure everything passes before pushing.
     ```bash
     composer lint:fix
     composer lint:all
@@ -26,9 +26,10 @@ We adhere to strict coding standards to ensure high quality and maintainability.
     composer check
     ```
     Use `composer test:coverage` when you need the enforced 98% coverage gate.
+    Run `composer ci` when workflow files, Composer metadata, or release-surface files change.
 
-7.  **Commit**: Use Conventional Commit messages such as `feat(http): Add retry header propagation`.
-8.  **Push** and **Create Pull Request** into `develop`.
+8.  **Commit**: Use Conventional Commit messages such as `feat(http): Add retry header propagation`.
+9.  **Push** and **Create Pull Request** into `develop`.
 
 Release preparation is separate from normal feature work: create `release/<version>` from `develop`, stabilize there, then open the release PR into `master`.
 

@@ -8,9 +8,7 @@ Use this prompt when JetBrains AI should review release-sensitive changes.
 Check whether jooservices/client is ready for release-related changes.
 
 Requirements:
-- Run composer lint:all.
-- Run composer test.
-- Run composer test:coverage.
+- Run composer check.
 - Run composer ci.
 - Verify docs links if release notes or docs changed.
 - Confirm CHANGELOG.md and release workflows are aligned.

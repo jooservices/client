@@ -36,7 +36,7 @@ Define how AI assistants should work in this repository and where AI-specific gu
 - When changing live-network test gating or diagnostics, update `ai/skills/live-network-diagnostics.md`.
 - When changing validation expectations, update `.claude/commands/` and `.cursor/rules/` together.
 - When changing AI workflow wording, keep Antigravity and JetBrains prompt templates in sync with the Claude command set.
-- Keep docs links aligned with the numbered docs structure (`00-architecture` to `04-development`).
+- Keep docs links aligned with the numbered docs structure (`00-architecture` to `05-maintenance`).
 
 ## Verification Checklist
 
