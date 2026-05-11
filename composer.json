@@ -2,7 +2,6 @@
     "name": "jooservices/client",
     "description": "Strict, extensible PHP 8.5+ HTTP client wrapper for JOOservices",
     "type": "library",
-    "version": "1.2.2",
     "license": "MIT",
     "keywords": [
         "http-client",
