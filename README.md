@@ -1,6 +1,6 @@
 # JOOservices HTTP Client
 
-A robust, layered HTTP Client wrapper designed for extensibility, strict typing, and high performance. Built with a "Clean Architecture" approach, decoupling the business logic from the underlying Guzzle transport.
+A robust, layered HTTP client wrapper designed for extensibility, strict typing, and high performance. Built with a clean, package-oriented architecture that decouples transport integration from client behavior.
 
 [![CI](https://github.com/jooservices/client/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/jooservices/client/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/jooservices/client/branch/develop/graph/badge.svg)](https://codecov.io/gh/jooservices/client)
@@ -99,20 +99,24 @@ $client = ClientBuilder::create()
     ->build();
 ```
 
+Request and response body logging should stay opt-in. Keep `logBodies: false` unless the integration explicitly needs body-level diagnostics and the payload is safe to record.
+
 ## Quality Assurance
 
 The repository uses the DTO-style quality contract with a few client-specific additions.
 
 ```bash
-composer lint:all
-composer test
+composer check
 ```
+
+Run `composer lint:all` and `composer test` directly when you want the underlying steps separately; use `composer check` for the standard combined gate.
 
 Additional validation commands:
 
 - `composer lint:fix`
 - `composer test:coverage`
-- `vendor/bin/phpbench run --report=default`
+- `composer bench`
+- `composer ci`
 
 Intentional client-specific differences from the DTO baseline:
 
@@ -135,13 +139,12 @@ This package includes AI-oriented scaffolding to keep delivery consistent with q
 
 - Agent guidance: [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md)
 - Tooling folders: `.claude/commands`, `.cursor/rules`, `ai/skills`, `antigravity/prompts`, `jetbrains/prompts`
-- Development process references: [docs/04-development](docs/04-development)
+- Development process references: [docs/04-development](docs/04-development), [docs/05-maintenance](docs/05-maintenance)
 
 When AI changes code, run:
 
 ```bash
-composer lint:all
-composer test
+composer check
 ```
 
 ## Docker Development
@@ -169,3 +172,5 @@ This test hits:
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+Normal feature and fix work branches from `develop` and PRs back into `develop`. Release preparation uses `release/<version>` branches from `develop` into `master`.

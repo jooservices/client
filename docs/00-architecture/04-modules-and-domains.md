@@ -589,7 +589,7 @@ $client = ClientBuilder::create()
 - **PHPMD**: Mess detection
 - **PHPBench**: Performance benchmarking
 
-**Unified Command**: `composer quality`
+**Unified Commands**: `composer lint:all`, `composer test`, and `composer check`
 
 **Status**: ✅ Confirmed
 

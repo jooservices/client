@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [master, develop]
   workflow_dispatch:
     inputs:
       run_live_tests:
@@ -41,8 +41,11 @@ jobs:
       - name: Install Composer dependencies
         uses: ramsey/composer-install@v4
 
+      - name: Validate Composer metadata
+        run: composer validate --strict
+
       - name: Run Composer audit
-        run: composer audit --abandoned=report
+        run: composer audit --no-dev --locked --abandoned=fail
 
   lint:
     name: Lint - ${{ matrix.tool.name }}
@@ -155,7 +158,7 @@ jobs:
         uses: ramsey/composer-install@v4
 
       - name: Run benchmarks
-        run: vendor/bin/phpbench run --report=default
+        run: composer bench
 
   live-network:
     name: Live Network Test (optional)

@@ -352,4 +352,4 @@ Potential future features based on feature gaps:
 - [Project Overview](01-project-overview.md)
 - [Technology Stack](03-tech-stack.md)
 - [Feature Inventory](04-modules-and-domains.md)
-- [Gaps, Risks, and Technical Debt (retained audit artifact)](../PR1-REVIEW-VERIFICATION.md)
+- [Gaps, Risks, and Technical Debt (retained audit artifact)](../05-maintenance/PR1-REVIEW-VERIFICATION.md)

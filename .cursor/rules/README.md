@@ -12,3 +12,4 @@ Workspace-specific rule files for Cursor-based workflows.
 
 - Mirror critical constraints from [AGENTS.md](../../AGENTS.md) and [CLAUDE.md](../../CLAUDE.md) without introducing conflicting instructions.
 - Update this index whenever a rule file is added, renamed, or removed.
+- Keep branch-flow guidance aligned with the repository-standard `develop` to `master` release model.

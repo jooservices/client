@@ -9,8 +9,8 @@ Review release prerequisites before tagging or merging release-sensitive changes
 
 ## Required Checks
 
-1. Run `composer lint`.
-2. Run `composer quality`.
+1. Run `composer check`.
+2. Run `composer ci`.
 3. Run [docs-verify.md](docs-verify.md) if release notes or documentation changed.
 
 ## Release Preconditions

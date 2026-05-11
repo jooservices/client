@@ -8,12 +8,12 @@ Define how AI assistants should work in this repository and where AI-specific gu
 
 - Keep package purpose intact: HTTP client + logging + MongoDB config.
 - Prefer minimal diffs and preserve public API compatibility.
-- Validate quality commands before finalizing changes.
+- Validate canonical composer commands before finalizing changes.
 
 ## AI Guidance Locations
 
 - `AGENTS.md`: Core behavior and package constraints for coding agents.
-- `CLAUDE.md`: Required final validation contract (`composer lint`, `composer quality`, docs verification).
+- `CLAUDE.md`: Required final validation contract (`composer lint:all`, `composer test`, `composer check`, `composer ci`, docs verification).
 - `ai/skills/`: Domain notes for common tasks:
 	- `http-logging.md`
 	- `mongodb-config.md`
@@ -36,11 +36,13 @@ Define how AI assistants should work in this repository and where AI-specific gu
 - When changing live-network test gating or diagnostics, update `ai/skills/live-network-diagnostics.md`.
 - When changing validation expectations, update `.claude/commands/` and `.cursor/rules/` together.
 - When changing AI workflow wording, keep Antigravity and JetBrains prompt templates in sync with the Claude command set.
-- Keep docs links aligned with the numbered docs structure (`00-architecture` to `04-development`).
+- Keep docs links aligned with the numbered docs structure (`00-architecture` to `05-maintenance`).
 
 ## Verification Checklist
 
-- Run `composer lint`.
-- Run `composer quality`.
+- Run `composer lint:all`.
+- Run `composer test`.
+- Run `composer check`.
 - If docs changed, follow `.claude/commands/docs-verify.md` and verify markdown links after doc changes.
 - If coverage-sensitive behavior changed, run `composer test:coverage`.
+- If workflow, composer, or release surfaces changed, run `composer ci`.

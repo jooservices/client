@@ -1,15 +1,29 @@
 {
     "name": "jooservices/client",
-    "description": "A robust, layered HTTP Client wrapper for JOOservices",
+    "description": "Strict, extensible PHP 8.5+ HTTP client wrapper for JOOservices",
     "type": "library",
-    "version": "1.2.2",
     "license": "MIT",
+    "keywords": [
+        "http-client",
+        "guzzle",
+        "dto",
+        "retry",
+        "circuit-breaker",
+        "async",
+        "cache",
+        "logging",
+        "jooservices"
+    ],
     "authors": [
         {
             "name": "JOOservices",
             "email": "contact@jooservices.com"
         }
     ],
+    "support": {
+        "issues": "https://github.com/jooservices/client/issues",
+        "source": "https://github.com/jooservices/client"
+    },
     "require": {
         "php": "^8.5",
         "guzzlehttp/guzzle": "^7.9",
@@ -52,6 +66,7 @@
             "@php vendor/bin/phpunit --coverage-html coverage --coverage-clover coverage/clover.xml",
             "@php scripts/coverage-check.php 98"
         ],
+        "bench": "@php vendor/bin/phpbench run --report=default",
         "test:unit": "@php vendor/bin/phpunit --group=unit",
         "test:integration": "@php vendor/bin/phpunit --group=integration",
         "test:arch": "@php vendor/bin/phpunit --group=arch",

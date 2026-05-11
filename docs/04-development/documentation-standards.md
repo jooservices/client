@@ -209,4 +209,4 @@ Before finalizing documentation:
 - [Confidence Levels](confidence-levels.md)
 - [Templates and Writing Rules](templates-and-writing-rules.md)
 - [Glossary](glossary.md)
-- [PR #1 Review Verification (retained audit artifact)](../PR1-REVIEW-VERIFICATION.md)
+- [PR #1 Review Verification (retained audit artifact)](../05-maintenance/PR1-REVIEW-VERIFICATION.md)
