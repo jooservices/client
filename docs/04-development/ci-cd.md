@@ -24,6 +24,7 @@
 - `semantic-pr.yml` enforces Conventional Commit types and requires pull-request subjects to start with an uppercase letter.
 - `pr-labeler.yml` applies DTO-style labels such as `documentation`, `dependencies`, `ci/cd`, `configuration`, `source`, and `tests`.
 - `release.yml` includes a Packagist notification step that runs when credentials are configured.
+- `release.yml` validates tagged releases with the same PHPUnit coverage-capable PHP setup used by CI so `composer test` does not fail on missing coverage drivers.
 
 ## Branch Model
 
