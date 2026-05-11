@@ -11,11 +11,12 @@
 
 ## Main CI Flow
 
-- `security`: `composer audit`
+- Trigger branches: `develop` and `master`
+- `security`: `composer validate --strict` and `composer audit --no-dev --locked --abandoned=fail`
 - `lint`: matrix over `lint:pint`, `lint:phpcs`, `lint:phpstan`, `lint:phpmd`, and `lint:cs`
 - `dependency-review`: pull-request only and non-blocking
 - `tests`: `composer test:coverage`, Codecov upload, and coverage artifact upload
-- `benchmark`: PHPBench after tests
+- `benchmark`: `composer bench` after tests
 - `live-network`: optional workflow-dispatch job for real external logging verification
 
 ## Auxiliary Automation
@@ -23,3 +24,9 @@
 - `semantic-pr.yml` enforces Conventional Commit types and requires pull-request subjects to start with an uppercase letter.
 - `pr-labeler.yml` applies DTO-style labels such as `documentation`, `dependencies`, `ci/cd`, `configuration`, `source`, and `tests`.
 - `release.yml` includes a Packagist notification step that runs when credentials are configured.
+
+## Branch Model
+
+- Normal implementation work targets `develop`.
+- Release preparation moves from `develop` into `master` through a release branch.
+- Tag-driven release automation starts from `master`.

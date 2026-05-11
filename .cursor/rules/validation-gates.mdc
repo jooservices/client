@@ -13,7 +13,8 @@ globs:
 alwaysApply: false
 ---
 
-- Before finalizing code changes, run `composer lint` and `composer quality`.
+- Before finalizing code changes, run `composer lint:all`, `composer test`, and `composer check`.
 - If documentation changed, also run the docs verification workflow documented in `.claude/commands/docs-verify.md`.
 - If coverage-sensitive behavior changed, run `composer test:coverage` and call out any intentional divergence from DTO.
+- If workflow, composer, or release-surface files changed, run `composer ci`.
 - If a required check cannot be run, state that clearly in the final handoff.

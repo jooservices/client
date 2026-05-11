@@ -9,7 +9,7 @@ Validate documentation edits without changing the repository structure.
 
 ## What To Check
 
-1. Numbered documentation structure still matches `docs/00-architecture` through `docs/04-development`.
+1. Numbered documentation structure still matches `docs/00-architecture` through `docs/05-maintenance`.
 2. Relative Markdown links resolve to existing files.
 3. AI guidance references point to real files instead of placeholders.
 

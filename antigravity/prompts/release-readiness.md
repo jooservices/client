@@ -8,8 +8,8 @@ Use this prompt when Antigravity should review release-sensitive changes.
 Check release readiness for jooservices/client.
 
 Requirements:
-- Run composer lint.
-- Run composer quality.
+- Run composer check.
+- Run composer ci.
 - Verify docs links if release notes or docs changed.
 - Confirm CHANGELOG.md and release workflows are aligned.
 - Treat publishing credentials as optional and do not assume local secrets exist.

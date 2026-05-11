@@ -14,7 +14,7 @@ Developers, architects, and technical contributors.
 
 **Name**: jooservices/client  
 **Type**: PHP Library (Composer package)  
-**Version**: 1.1.0  
+**Version**: 1.3.0  
 **License**: MIT  
 **PHP Requirement**: ^8.5  
 
@@ -332,11 +332,11 @@ Developers, architects, and technical contributors.
 
 ### Quality Gate
 
-**Confirmed**: `composer quality` runs complete quality suite:
-1. Fix code style (`pint`)
-2. Run static analysis (`phpstan`)
-3. Check code style compliance (`phpcs`)
-4. Run test suite (`phpunit`)
+**Confirmed**: the canonical quality flow is `composer lint:all`, `composer test`, and `composer check`:
+1. Validate formatting and structure (`pint`, `phpcs`, `php-cs-fixer`)
+2. Run static analysis and maintainability checks (`phpstan`, `phpmd`)
+3. Run the standard test suite (`phpunit`)
+4. Keep `composer quality` only as a compatibility alias for `composer check`
 
 **Evidence**: `composer.json` scripts section
 
@@ -383,11 +383,11 @@ Located in `scripts/`:
 ## Version Control and History
 
 **Repository**: Git  
-**Main Branch**: Assumed `main` or `master` (not explicitly confirmed)  
+**Primary Branches**: `develop` (integration) and `master` (stable releases)  
 **Changelog**: Maintained in `CHANGELOG.md` (Keep a Changelog format)  
 **Versioning**: Semantic Versioning 2.0.0
 
-**Version**: 1.1.0 (Semantic Versioning)
+**Version**: 1.3.0 (release branch target as of this document)
 
 ---
 

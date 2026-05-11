@@ -580,8 +580,10 @@ vendor/bin/phpunit --group=integration
 ### Run Code Quality Checks
 
 ```bash
-# All quality checks
-composer quality
+# Canonical quality flow
+composer lint:all
+composer test
+composer check
 
 # Individual tools
 composer analyse   # PHPStan

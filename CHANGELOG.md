@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.3.0] - 2026-05-11
+
+### Changed
+- **Branch Workflow**: Restored the DTO-style `develop` and `master` branch model without cutting a new release.
+- **CI/CD**: Aligned workflow branch targets and Composer validation steps with the active branch model.
+- **Docs**: Added `docs/05-maintenance/` and moved the retained review-verification artifact out of the docs root.
+- **Contributor Guidance**: Updated AGENTS, CLAUDE, hooks, and contributor docs to use canonical validation commands and the restored Git flow.
+
 ## [1.2.2] - 2026-04-05
 
 ### Added
