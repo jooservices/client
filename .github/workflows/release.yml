@@ -32,7 +32,7 @@ jobs:
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: mbstring, json
-          coverage: none
+          coverage: pcov
 
       - name: Install Composer dependencies
         uses: ramsey/composer-install@v4

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Release Automation**: Enabled a PHP coverage driver in the tag-driven release workflow so release validation can run `composer test` without failing on PHPUnit coverage warnings.
+
 ## [1.3.0] - 2026-05-11
 
 ### Changed
