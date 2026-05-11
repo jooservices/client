@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-11
+
 ### Changed
 - **Branch Workflow**: Restored the DTO-style `develop` and `master` branch model without cutting a new release.
 - **CI/CD**: Aligned workflow branch targets and Composer validation steps with the active branch model.

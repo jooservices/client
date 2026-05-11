@@ -14,7 +14,7 @@ Developers, architects, and technical contributors.
 
 **Name**: jooservices/client  
 **Type**: PHP Library (Composer package)  
-**Version**: 1.1.0  
+**Version**: 1.3.0  
 **License**: MIT  
 **PHP Requirement**: ^8.5  
 
@@ -387,7 +387,7 @@ Located in `scripts/`:
 **Changelog**: Maintained in `CHANGELOG.md` (Keep a Changelog format)  
 **Versioning**: Semantic Versioning 2.0.0
 
-**Version**: 1.2.2 (latest tagged release as of this document)
+**Version**: 1.3.0 (release branch target as of this document)
 
 ---
 
