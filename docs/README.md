@@ -2,6 +2,8 @@
 
 Documentation is organized with DTO-aligned indexing while preserving client-specific content.
 
+The package name is `jooservices/client`. The PHP namespace is `JOOservices\\Client\\`.
+
 ## Documentation Structure
 
 - [00-architecture](00-architecture)
@@ -9,6 +11,7 @@ Documentation is organized with DTO-aligned indexing while preserving client-spe
 - [02-user-guide](02-user-guide)
 - [03-examples](03-examples)
 - [04-development](04-development)
+- [05-maintenance](05-maintenance)
 
 ## Quick Links
 
@@ -18,6 +21,7 @@ Documentation is organized with DTO-aligned indexing while preserving client-spe
 - [API reference](02-user-guide/api-reference.md)
 - [Examples](03-examples/README.md)
 - [CI/CD](04-development/ci-cd.md)
+- [Maintenance Notes](05-maintenance/README.md)
 
 ## Related Files
 

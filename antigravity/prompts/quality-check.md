@@ -9,10 +9,12 @@ Review the current branch in jooservices/client and run the repository validatio
 
 Requirements:
 - Preserve the public API and package identity.
-- Run composer lint.
-- Run composer quality.
+- Run composer lint:all.
+- Run composer test.
+- Run composer check.
 - If docs changed, verify local Markdown links and the numbered docs structure.
 - If coverage-sensitive code changed, run composer test:coverage.
+- If workflow, composer, or release-surface files changed, run composer ci.
 
 Report findings first, then list any remaining risks or checks that could not be completed.
 ```

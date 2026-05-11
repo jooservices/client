@@ -35,6 +35,12 @@
             },
             {
                 "action": "echo 'Running PHPStan...' && composer lint:phpstan"
+            },
+            {
+                "action": "echo 'Running PHPMD...' && composer lint:phpmd"
+            },
+            {
+                "action": "echo 'Running PHP-CS-Fixer...' && composer lint:cs"
             }
         ]
     },
@@ -42,7 +48,7 @@
         "enabled": true,
         "actions": [
             {
-                "action": "echo 'Scanning unpushed commits for secrets...' && gitleaks detect --verbose --redact --config=.gitleaks.toml --log-opts=\"origin/main..HEAD\" || echo 'Note: install gitleaks locally to enable pre-push secret scans'"
+                "action": "echo 'Scanning unpushed commits for secrets...' && BASE_REF=$(git rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/@@') && gitleaks detect --verbose --redact --config=.gitleaks.toml --log-opts=\"${BASE_REF}..HEAD\" || echo 'Note: install gitleaks locally to enable pre-push secret scans'"
             },
             {
                 "action": "echo 'Running tests...' && composer test"
