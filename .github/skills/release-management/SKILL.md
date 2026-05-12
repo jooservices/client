@@ -11,7 +11,7 @@ description: "Use when preparing, validating, tagging, or publishing jooservices
 - Versioning follows semantic versioning: `MAJOR.MINOR.PATCH`, tagged as `vX.Y.Z`.
 - Normal work starts from `develop` and opens a PR back to `develop`.
 - Release branches are named `release/<version>`, start from latest `develop`, and target `master`.
-- Never commit directly to `master` or `develop`.
+- Never commit directly to `master` or `develop`; all updates to those branches must go through pull requests.
 - Stop and ask when version scope, changelog content, branch state, or compatibility impact is unclear.
 
 ## Version Decision
@@ -43,7 +43,7 @@ Do not widen Composer constraints or drop supported PHP/dependency versions with
 4. Merge only after checks pass, required reviews are approved, no requested changes remain, no unresolved review threads remain, and the branch is mergeable.
 5. Tag from `master` using `vX.Y.Z`.
 6. Create or verify the GitHub release and package publication.
-7. Merge `master` back into `develop`.
+7. Merge `master` back into `develop` through a pull request and normal review/check gates.
 8. Clean up only safely merged branches.
 
 ## Failure Rules
