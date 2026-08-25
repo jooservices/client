@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JOOservices\Client\Tests\Unit\Transport;
 
 use JOOservices\Client\Dto\RequestOptions;
+use JOOservices\Client\Exceptions\InvalidConfigurationException;
 use JOOservices\Client\Exceptions\NetworkConnectionException;
 use JOOservices\Client\Exceptions\TimeoutException;
 use JOOservices\Client\Testing\FakeTransport;
@@ -43,6 +44,13 @@ final class FailoverTransportTest extends TestCase
 
         $this->expectException(TimeoutException::class);
         $failover->handle($request, new RequestOptions());
+    }
+
+    #[Test]
+    public function testRejectsAnEmptyTransportList(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        new FailoverTransport([]);
     }
 
     #[Test]

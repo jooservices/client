@@ -4,12 +4,25 @@ declare(strict_types=1);
 
 namespace JOOservices\Client\Tests\Unit\Cache;
 
+use DateInterval;
 use JOOservices\Client\Cache\ArrayCache;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class ArrayCacheTest extends TestCase
 {
+    #[Test]
+    public function testExpiresEntriesSetWithAPastTtl(): void
+    {
+        $cache = new ArrayCache();
+        $cache->set('a', 'value', -1);
+        self::assertNull($cache->get('a'));
+
+        $cache->set('b', 'value', new DateInterval('PT0S'));
+        usleep(1000);
+        self::assertNull($cache->get('b'));
+    }
+
     #[Test]
     public function testGetsAndDeletesStoredValues(): void
     {
