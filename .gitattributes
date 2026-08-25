@@ -1,0 +1,22 @@
+* text=auto eol=lf
+*.php text eol=lf diff=php
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xml text eol=lf
+*.neon text eol=lf
+composer.lock binary
+/tests export-ignore
+/docs export-ignore
+/.github export-ignore
+phpunit.xml export-ignore
+phpstan.neon export-ignore
+phpmd.xml export-ignore
+phpcs.xml export-ignore
+pint.json export-ignore
+.php-cs-fixer.dist.php export-ignore
+captainhook.json export-ignore
+Dockerfile export-ignore
+docker-compose.yml export-ignore
+Makefile export-ignore

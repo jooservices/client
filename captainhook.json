@@ -1,0 +1,33 @@
+{
+  "$schema": "https://captainhookphp.github.io/captainhook/schema.json",
+  "commit-msg": {
+    "enabled": true,
+    "actions": [
+      {
+        "action": "\\CaptainHook\\App\\Hook\\Message\\Action\\Regex",
+        "options": {
+          "regex": "/^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\\(.+\\))?!?:\\s[A-Z].{0,99}$/",
+          "error": "Commit message must follow Conventional Commits with an uppercase subject: <type>(<scope>): Subject"
+        }
+      }
+    ]
+  },
+  "pre-commit": {
+    "enabled": true,
+    "actions": [
+      {
+        "action": "composer lint",
+        "conditions": []
+      }
+    ]
+  },
+  "pre-push": {
+    "enabled": true,
+    "actions": [
+      {
+        "action": "composer test",
+        "conditions": []
+      }
+    ]
+  }
+}

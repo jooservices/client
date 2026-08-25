@@ -1,0 +1,13 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jooservices/client:php85
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+    user: "${DOCKER_UID:-0}:${DOCKER_GID:-0}"
+    tty: true

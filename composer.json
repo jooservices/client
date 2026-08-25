@@ -1,0 +1,67 @@
+{
+  "name": "jooservices/client",
+  "description": "PSR-18 HTTP client with JOOservices developer experience.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.5",
+    "ext-curl": "*",
+    "jooservices/dto": "^3.0",
+    "nyholm/psr7": "^1.8",
+    "psr/http-client": "^1.0",
+    "psr/http-factory": "^1.1",
+    "psr/http-message": "^2.0"
+  },
+  "suggest": {
+    "guzzlehttp/guzzle": "Enables GuzzleTransport.",
+    "justinrainbow/json-schema": "Enables JSON schema response validation.",
+    "psr/log": "Enables LoggingMiddleware.",
+    "psr/simple-cache": "Enables CacheMiddleware and persistent resilience stores."
+  },
+  "require-dev": {
+    "captainhook/captainhook": "^5.23",
+    "friendsofphp/php-cs-fixer": "^3.65",
+    "laravel/pint": "^1.18",
+    "phpbench/phpbench": "^1.6",
+    "phpmd/phpmd": "^2.15",
+    "phpstan/phpstan": "^2.1",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpstan/phpstan-strict-rules": "^2.0",
+    "phpunit/phpunit": "^13.0",
+    "squizlabs/php_codesniffer": "^3.12 || ^4.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "JOOservices\\Client\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "JOOservices\\Client\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit --no-coverage",
+    "test:coverage": "phpunit --coverage-html coverage --coverage-clover coverage.xml",
+    "coverage:check": "php tools/coverage-enforce.php coverage.xml",
+    "bench": "phpbench run --report=aggregate",
+    "lint:pint": "pint --test",
+    "lint:pint:fix": "pint",
+    "lint:phpcs": "phpcs --standard=phpcs.xml",
+    "lint:phpstan": "XDEBUG_MODE=off phpstan analyse --configuration=phpstan.neon --memory-limit=512M",
+    "lint:phpmd": "php -d error_reporting=6143 vendor/bin/phpmd src text phpmd.xml",
+    "lint:cs": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run --diff --sequential",
+    "lint:cs:fix": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --sequential",
+    "lint": ["@lint:pint", "@lint:phpcs", "@lint:phpstan", "@lint:phpmd", "@lint:cs"],
+    "lint:fix": ["@lint:pint:fix", "@lint:cs:fix"],
+    "check": ["@lint", "@test"],
+    "ci": ["@lint", "@test:coverage", "@coverage:check"],
+    "hooks:install": "captainhook install --force --skip-existing"
+  },
+  "config": {
+    "sort-packages": true,
+    "audit": {"abandoned": "ignore"}
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}

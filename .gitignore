@@ -1,0 +1,15 @@
+/vendor/
+/coverage/
+/coverage.xml
+/.phpunit.cache/
+/.php-cs-fixer.cache
+.phpunit.result.cache
+composer.phar
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+/node_modules/
+/.idea/
+/poc.php
