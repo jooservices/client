@@ -42,8 +42,13 @@ final class ResponseTest extends TestCase
     #[Test]
     public function testThrowOn404(): void
     {
-        $this->expectException(HttpResponseException::class);
-        Response::from(new PsrResponse(404))->throw();
+        $psr = new PsrResponse(404);
+        try {
+            Response::from($psr)->throw();
+            self::fail('Expected HttpResponseException.');
+        } catch (HttpResponseException $exception) {
+            self::assertSame($psr, $exception->getResponse());
+        }
     }
 
     #[Test]
