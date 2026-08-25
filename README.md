@@ -16,7 +16,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 
 | | |
 | --- | --- |
-| Status | **`v4.0.0` — breaking rebuild** |
+| Status | **`v4.0.0` — first public release** |
 | First public line | `v4.0.0` — earlier releases belong to the retired implementation ([changelog](CHANGELOG.md) starts here) |
 | Compatibility | **None with older versions.** Client verbs (`$client->get()`, `post()`, …) and Guzzle-style option bags are removed |
 | Core contract | PSR-18 `sendRequest(RequestInterface)` — HTTP 4xx/5xx responses are returned, never thrown |
