@@ -6,6 +6,8 @@ parameters:
     paths:
         - src
         - tests
+    excludePaths:
+        - tests/Fixtures/redirect-target-dns-stub.php
     reportUnmatchedIgnoredErrors: true
     checkMissingCallableSignature: true
     checkExplicitMixedMissingReturn: true
