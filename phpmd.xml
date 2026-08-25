@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<ruleset name="JOOservices Client" xmlns="http://pmd.sf.net/ruleset/1.0.0">
+    <description>
+        Full PHPMD. BooleanArgumentFlag omitted for DTO/config data.
+        ClientBuilder is an HTTP facade: codesize limits that fight fluent
+        with* shortcuts are excluded here, not via per-class suppressions.
+    </description>
+    <rule ref="rulesets/cleancode.xml">
+        <exclude name="BooleanArgumentFlag"/>
+    </rule>
+    <rule ref="rulesets/codesize.xml">
+        <exclude name="TooManyPublicMethods"/>
+        <exclude name="CouplingBetweenObjects"/>
+        <exclude name="ExcessiveClassComplexity"/>
+        <exclude name="TooManyFields"/>
+        <exclude name="ExcessivePublicCount"/>
+    </rule>
+    <rule ref="rulesets/controversial.xml"/>
+    <rule ref="rulesets/design.xml">
+        <exclude name="CouplingBetweenObjects"/>
+    </rule>
+    <rule ref="rulesets/naming.xml"/>
+    <rule ref="rulesets/unusedcode.xml"/>
+</ruleset>
