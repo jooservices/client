@@ -1,0 +1,161 @@
+# Dedicated CI for jooservices/client — self-hosted runner1 (Linux X64)
+# Post-merge sanity run on master/develop heads. Full gate lives in ci.yml (pull requests).
+name: CI post-merge
+
+on:
+  push:
+    branches: [master, develop]
+
+concurrency:
+  group: ci-post-merge-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build PHP image
+        run: tools/ci/docker-compose build php
+
+      - name: Cache Composer vendor
+        uses: actions/cache@v5
+        id: vendor-cache
+        with:
+          path: vendor
+          key: composer-vendor-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-vendor-
+
+      - name: Install dependencies
+        if: steps.vendor-cache.outputs.cache-hit != 'true'
+        run: tools/ci/docker-compose run --rm php composer install --no-interaction --prefer-dist
+
+      - name: Composer validate
+        run: tools/ci/docker-compose run --rm php composer validate --strict
+
+  test:
+    name: Test (${{ matrix.name }})
+    needs: [validate]
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: Unit
+            suite: Unit
+          - name: Integration
+            suite: Integration
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build PHP image
+        run: tools/ci/docker-compose build php
+
+      - name: Cache Composer vendor
+        uses: actions/cache@v5
+        id: vendor-cache
+        with:
+          path: vendor
+          key: composer-vendor-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-vendor-
+
+      - name: Install dependencies
+        if: steps.vendor-cache.outputs.cache-hit != 'true'
+        run: tools/ci/docker-compose run --rm php composer install --no-interaction --prefer-dist
+
+      - name: Run test suite with coverage
+        run: |
+          mkdir -p build/coverage
+          tools/ci/docker-compose run --rm php ./vendor/bin/phpunit \
+            --testsuite=${{ matrix.suite }} \
+            --coverage-clover=build/coverage/clover-${{ matrix.suite }}.xml
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-post-merge-${{ matrix.suite }}
+          path: build/coverage/clover-${{ matrix.suite }}.xml
+          if-no-files-found: error
+
+  coverage:
+    name: Coverage upload
+    needs: [test]
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build PHP image
+        run: tools/ci/docker-compose build php
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: coverage-post-merge-*
+          path: build/coverage/matrix
+          merge-multiple: true
+
+      - name: Enforce coverage and merge Clover reports
+        run: |
+          tools/ci/docker-compose run --rm php php tools/coverage-enforce.php build/coverage/matrix/clover-Unit.xml
+          tools/ci/docker-compose run --rm php php tools/coverage-enforce.php build/coverage/matrix/clover-Integration.xml
+          tools/ci/docker-compose run --rm php php tools/coverage-merge.php \
+            build/coverage/matrix/clover-Unit.xml \
+            build/coverage/matrix/clover-Integration.xml \
+            build/coverage/clover-combined.xml
+          ls -la build/coverage
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: build/coverage/clover-combined.xml
+          fail_ci_if_error: true
+          verbose: true
+
+      - name: Resolve SonarQube host URL
+        id: sonar-config
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          set -euo pipefail
+          host_url="${SONAR_HOST_URL:-https://sonarcloud.io}"
+          host_url="${host_url%/}"
+          case "${host_url}" in
+            http://*|https://*) ;;
+            *) host_url="https://${host_url}" ;;
+          esac
+          if [[ ! "${host_url}" =~ ^https?://[^[:space:]/]+ ]]; then
+            echo "SONAR_HOST_URL must be a valid HTTP(S) URL"
+            exit 1
+          fi
+          echo "host_url=${host_url}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload SonarQube analysis
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ steps.sonar-config.outputs.host_url }}
+        with:
+          args: >
+            -Dsonar.php.coverage.reportPaths=build/coverage/clover-combined.xml
