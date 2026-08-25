@@ -13,6 +13,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 
+require_once __DIR__ . '/../../Fixtures/redirect-target-dns-stub.php';
+
 final class RedirectHandlerTest extends TestCase
 {
     #[Test]

@@ -84,6 +84,7 @@ final class SupportUtilitiesTest extends TestCase
         self::assertSame(0, $header->milliseconds('0', 1));
 
         (new UsleepSleeper())->sleep(0);
+        (new UsleepSleeper())->sleep(1);
         self::assertSame('https://api.test:0', (new HostPartitionKeyResolver())->resolve((new Psr17Factory())->createRequest('GET', 'https://api.test/path')));
     }
 }

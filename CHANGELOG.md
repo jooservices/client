@@ -1,6 +1,13 @@
 # Changelog
 
-## 4.0.0
+All notable changes to this package are documented in this file. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [Semantic Versioning](https://semver.org/).
+
+> [!WARNING]
+> **This changelog starts at `v4.0.0`.** The package was fully rebuilt from scratch — a new codebase with fresh git history.
+> Earlier releases belong to the archived previous implementation and are **not ancestors** of this line.
+> **There is no backward compatibility with any previous version:** no shims, no deprecation bridges, no migration path. Upgrading means rewriting call sites against the new API.
+
+## [4.0.0] - 2026-08-25
 
 - Rebuilt the client around PSR-7, PSR-17 and PSR-18.
 - Added outbound middleware, resilience, transports and deterministic fakes.

@@ -90,8 +90,13 @@ final class PsrTransportTest extends TestCase
             }
         };
 
-        $this->expectException(JooRequestException::class);
-        new PsrTransport($inner)->handle($factory->createRequest('GET', 'https://abc.com'), new RequestOptions());
+        $request = $factory->createRequest('GET', 'https://abc.com');
+        try {
+            new PsrTransport($inner)->handle($request, new RequestOptions());
+            self::fail('Expected JooRequestException.');
+        } catch (JooRequestException $exception) {
+            self::assertSame($request, $exception->getRequest());
+        }
     }
 
     #[Test]

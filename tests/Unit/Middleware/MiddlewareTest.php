@@ -11,6 +11,7 @@ use JOOservices\Client\Dto\CacheConfig;
 use JOOservices\Client\Dto\OAuthTokenRefreshConfig;
 use JOOservices\Client\Dto\RequestOptions;
 use JOOservices\Client\Dto\ResponseValidationConfig;
+use JOOservices\Client\Exceptions\BulkheadRejectedException;
 use JOOservices\Client\Exceptions\CircuitOpenException;
 use JOOservices\Client\Exceptions\NetworkConnectionException;
 use JOOservices\Client\Exceptions\RateLimitExceededException;
@@ -41,6 +42,8 @@ use JOOservices\Client\Resilience\CircuitBreakerConfig;
 use JOOservices\Client\Resilience\FallbackConfig;
 use JOOservices\Client\Resilience\RateLimitConfig;
 use JOOservices\Client\Resilience\RetryConfig;
+use JOOservices\Client\Resilience\Storage\InMemoryBulkheadStore;
+use JOOservices\Client\Support\HostPartitionKeyResolver;
 use JOOservices\Client\Support\NullSleeper;
 use JOOservices\Client\Support\InMemoryMetricsRecorder;
 use JOOservices\Client\Logging\LogSanitizer;
@@ -66,6 +69,14 @@ final class MiddlewareTest extends TestCase
         $transport = (new FakeTransport())->push(new Response());
         (new AuthenticationMiddleware(new AuthenticationConfig('bearer', 'secret')))->process($request->withHeader('Authorization', 'caller'), new RequestOptions(), $transport);
         self::assertSame('caller', $transport->recorded()[0]['request']->getHeaderLine('Authorization'));
+
+        $transport = (new FakeTransport())->push(new Response());
+        (new AuthenticationMiddleware(new AuthenticationConfig('basic', 'user:pass')))->process($this->request(), new RequestOptions(), $transport);
+        self::assertSame('Basic ' . base64_encode('user:pass'), $transport->recorded()[0]['request']->getHeaderLine('Authorization'));
+
+        $transport = (new FakeTransport())->push(new Response());
+        (new AuthenticationMiddleware(new AuthenticationConfig('api-key', 'raw-key', 'X-Api-Key')))->process($this->request(), new RequestOptions(), $transport);
+        self::assertSame('raw-key', $transport->recorded()[0]['request']->getHeaderLine('X-Api-Key'));
     }
 
     #[Test]
@@ -80,6 +91,13 @@ final class MiddlewareTest extends TestCase
     {
         $this->expectException(\JOOservices\Client\Exceptions\InvalidConfigurationException::class);
         new AuthenticationConfig('bearer', '');
+    }
+
+    #[Test]
+    public function testUserAgentMiddlewareRejectsAnEmptyPool(): void
+    {
+        $this->expectException(\JOOservices\Client\Exceptions\InvalidConfigurationException::class);
+        new UserAgentMiddleware([]);
     }
 
     #[Test]
@@ -271,8 +289,13 @@ final class MiddlewareTest extends TestCase
         $transport = (new FakeTransport())->push(new Response(503));
         $breaker->process($this->request(), new RequestOptions(), $transport);
 
-        $this->expectException(CircuitOpenException::class);
-        $breaker->process($this->request(), new RequestOptions(), $transport);
+        $request = $this->request();
+        try {
+            $breaker->process($request, new RequestOptions(), $transport);
+            self::fail('Expected CircuitOpenException.');
+        } catch (CircuitOpenException $exception) {
+            self::assertSame($request, $exception->getRequest());
+        }
     }
 
     #[Test]
@@ -438,8 +461,71 @@ final class MiddlewareTest extends TestCase
         $failed = (new FakeTransport())->push(new NetworkConnectionException($this->request(), 'offline'));
         self::assertSame('fallback', (string) $fallback->process($this->request(), new RequestOptions(), $failed)->getBody());
 
+        $noFallbackOnNetworkFailure = new FallbackMiddleware(static fn(): Response => new Response(200, [], 'fallback'), new FallbackConfig(onNetworkFailure: false));
+        $stillFailed = (new FakeTransport())->push(new NetworkConnectionException($this->request(), 'offline'));
+        try {
+            $noFallbackOnNetworkFailure->process($this->request(), new RequestOptions(), $stillFailed);
+            self::fail('Expected the network exception to propagate.');
+        } catch (NetworkConnectionException) {
+            // Expected: onNetworkFailure is disabled, so the fallback must not run.
+        }
+
         $deadline = new DeadlineMiddleware(1.0);
         self::assertSame(200, $deadline->process($this->request(), new RequestOptions(), (new FakeTransport())->push(new Response()))->getStatusCode());
+    }
+
+    #[Test]
+    public function testDeadlineRethrowsAnUnrelatedFailureWithinBudgetAndFiresOnASlowSuccess(): void
+    {
+        $deadline = new DeadlineMiddleware(10.0);
+        $failingHandler = new class implements \JOOservices\Client\Contracts\RequestHandlerInterface {
+            public function handle(RequestInterface $request, RequestOptions $options): ResponseInterface
+            {
+                throw new NetworkConnectionException($request, 'boom');
+            }
+        };
+        try {
+            $deadline->process($this->request(), new RequestOptions(), $failingHandler);
+            self::fail('Expected the original exception to propagate.');
+        } catch (NetworkConnectionException) {
+            // Expected: elapsed time is well within the 10s budget, so the raw error passes through.
+        }
+
+        $slowSuccessHandler = new class implements \JOOservices\Client\Contracts\RequestHandlerInterface {
+            public function handle(RequestInterface $request, RequestOptions $options): ResponseInterface
+            {
+                usleep(30_000);
+
+                return new Response();
+            }
+        };
+        $this->expectException(TimeoutException::class);
+        new DeadlineMiddleware(0.01)->process($this->request(), new RequestOptions(), $slowSuccessHandler);
+    }
+
+    #[Test]
+    public function testBulkheadRejectsAtCapacityAndReleaseDecrementsRatherThanClearing(): void
+    {
+        $store = new InMemoryBulkheadStore();
+        $keys = new HostPartitionKeyResolver();
+        $request = $this->request();
+        $key = $keys->resolve($request);
+
+        // Occupy both slots of a 2-concurrent limit directly, then release one — the store must
+        // decrement rather than fully clear the key, so a third acquire at the same limit still fails.
+        self::assertTrue($store->tryAcquire($key, 2));
+        self::assertTrue($store->tryAcquire($key, 2));
+        self::assertFalse($store->tryAcquire($key, 2));
+        $store->release($key);
+        self::assertTrue($store->tryAcquire($key, 2));
+
+        $bulkhead = new BulkheadMiddleware(new BulkheadConfig(maxConcurrent: 1), $store, $keys);
+        try {
+            $bulkhead->process($request, new RequestOptions(), (new FakeTransport())->push(new Response()));
+            self::fail('Expected BulkheadRejectedException.');
+        } catch (BulkheadRejectedException $exception) {
+            self::assertSame($request, $exception->getRequest());
+        }
     }
 
     #[Test]
@@ -477,12 +563,20 @@ final class MiddlewareTest extends TestCase
         self::assertSame($pool, array_values(array_intersect($pool, array_keys($seen))));
 
         $transport = (new FakeTransport())->push(new Response());
+        (new UserAgentMiddleware('agent'))->process($this->request()->withHeader('User-Agent', 'caller-agent'), new RequestOptions(), $transport);
+        self::assertSame('caller-agent', $transport->recorded()[0]['request']->getHeaderLine('User-Agent'));
+
+        $transport = (new FakeTransport())->push(new Response());
         (new ApiVersionMiddleware('v1'))->process($this->request(), new RequestOptions(), $transport);
         self::assertSame('v1', $transport->recorded()[0]['request']->getHeaderLine('X-Api-Version'));
 
         $transport = (new FakeTransport())->push(new Response());
         (new IdempotencyKeyMiddleware())->process($this->request()->withMethod('POST'), new RequestOptions(), $transport);
         self::assertNotSame('', $transport->recorded()[0]['request']->getHeaderLine('Idempotency-Key'));
+
+        $transport = (new FakeTransport())->push(new Response());
+        (new IdempotencyKeyMiddleware())->process($this->request(), new RequestOptions(), $transport);
+        self::assertSame('', $transport->recorded()[0]['request']->getHeaderLine('Idempotency-Key'));
 
         $calls = [];
         $transport = (new FakeTransport())->push(new Response(200, ['Content-Length' => '5']));
@@ -507,14 +601,53 @@ final class MiddlewareTest extends TestCase
                 return 'new';
             }
         };
+        $healthyTransport = (new FakeTransport())->push(new Response(200));
+        $healthyResponse = new OAuthTokenRefreshMiddleware($provider, new OAuthTokenRefreshConfig())->process($this->request(), new RequestOptions(), $healthyTransport);
+        self::assertSame(200, $healthyResponse->getStatusCode());
+        self::assertCount(1, $healthyTransport->recorded());
+
         $transport = (new FakeTransport())->push(new Response(401))->push(new Response(200));
-        $response = (new OAuthTokenRefreshMiddleware($provider, new OAuthTokenRefreshConfig()))->process($this->request(), new RequestOptions(), $transport);
+        $refresher = new OAuthTokenRefreshMiddleware($provider, new OAuthTokenRefreshConfig());
+        $response = $refresher->process($this->request(), new RequestOptions(), $transport);
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('Bearer new', $transport->recorded()[1]['request']->getHeaderLine('Authorization'));
+
+        // A second 401 within the cooldown window must not trigger another refresh() call.
+        $cooldownTransport = (new FakeTransport())->push(new Response(401));
+        $cooldownResponse = $refresher->process($this->request(), new RequestOptions(), $cooldownTransport);
+        self::assertSame(401, $cooldownResponse->getStatusCode());
+        self::assertCount(1, $cooldownTransport->recorded());
 
         $metrics = new InMemoryMetricsRecorder();
         (new MetricsMiddleware($metrics))->process($this->request(), new RequestOptions(), (new FakeTransport())->push(new Response(201)));
         self::assertCount(2, $metrics->values());
+    }
+
+    #[Test]
+    public function testMetricsRecorderEvictsTheOldestObservationOncePerKeyCapIsExceeded(): void
+    {
+        $metrics = new InMemoryMetricsRecorder(maxPerKey: 1);
+        $metrics->observe('latency', 1.0);
+        $metrics->observe('latency', 2.0);
+
+        self::assertSame([2.0], $metrics->values()['latency:[]']);
+    }
+
+    #[Test]
+    public function testInterceptorOnErrorIsCalledAndTheExceptionStillPropagates(): void
+    {
+        $seen = null;
+        $interceptor = new InterceptorMiddleware(onError: function (\Throwable $error) use (&$seen): void {
+            $seen = $error;
+        });
+        $failingTransport = (new FakeTransport())->push(new NetworkConnectionException($this->request(), 'boom'));
+
+        try {
+            $interceptor->process($this->request(), new RequestOptions(), $failingTransport);
+            self::fail('Expected the network exception to propagate.');
+        } catch (NetworkConnectionException $error) {
+            self::assertSame($error, $seen);
+        }
     }
 
     #[Test]
@@ -554,6 +687,15 @@ final class MiddlewareTest extends TestCase
         $spyLogger->levels = [];
         (new LoggingMiddleware($spyLogger))->process($this->request(), new RequestOptions(verifySsl: true), (new FakeTransport())->push(new Response()));
         self::assertNotContains('warning', $spyLogger->levels);
+
+        $spyLogger->levels = [];
+        $failingTransport = (new FakeTransport())->push(new NetworkConnectionException($this->request(), 'boom'));
+        try {
+            (new LoggingMiddleware($spyLogger))->process($this->request(), new RequestOptions(), $failingTransport);
+            self::fail('Expected the network exception to propagate.');
+        } catch (NetworkConnectionException) {
+            self::assertContains('error', $spyLogger->levels);
+        }
 
         $fallback = new FallbackMiddleware(static fn(): Response => new Response(299), new FallbackConfig(onNetworkFailure: false, onServerError: true));
         self::assertSame(299, $fallback->process($this->request(), new RequestOptions(), (new FakeTransport())->push(new Response(503)))->getStatusCode());
