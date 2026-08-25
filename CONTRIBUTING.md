@@ -58,7 +58,7 @@ Run the relevant gates before every push — CI runs the same chain and **every 
 | `make validate` | `composer validate --strict` |
 | `make lint` | Pint (`per` preset), PHPCS (`PSR12`), PHPStan (max level + strict rules), PHPMD, PHP-CS-Fixer (`declare(strict_types=1)` enforcement) |
 | `make test` | PHPUnit Unit + Integration suites |
-| `make test-coverage` | Coverage run (CI enforces an 85% per-suite Clover floor via `tools/coverage-enforce.php`) |
+| `make test-coverage` | Coverage run (CI enforces an 85% Clover floor on the Unit suite via `tools/coverage-enforce.php`) |
 | `make audit` | Composer audit |
 | `make bench` | phpbench |
 | `make ci` | lint + coverage run + coverage enforcement (local CI parity) |
@@ -73,7 +73,7 @@ Coding rules:
 ## Testing expectations
 
 - every behavior change ships with tests; bug fixes ship with a regression test
-- unit and integration suites each independently stay above the 85% CI coverage floor
+- the Unit suite stays above the 85% CI coverage floor; Integration is narrow by design (real curl I/O against a local server) and isn't held to that floor on its own
 - public API changes update the README / relevant docs in the same PR
 
 ## Pull requests

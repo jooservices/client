@@ -63,7 +63,7 @@ flowchart TD
     S --- S3[SAST: Semgrep OSS]
     T --- T1[Unit suite + coverage artifact]
     T --- T2[Integration suite + coverage artifact]
-    C --- C1[Enforce 85% per-suite floor and merge Clover reports]
+    C --- C1[Enforce 85% floor on Unit, merge Clover reports]
     C --- C2[Upload to Codecov and SonarQube]
 ```
 

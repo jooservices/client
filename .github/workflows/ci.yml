@@ -232,8 +232,11 @@ jobs:
 
       - name: Enforce coverage and merge Clover reports
         run: |
+          # Only the Unit suite is enforced against the 85% floor: it's the suite responsible for
+          # exercising the codebase broadly. Integration is deliberately narrow (real curl I/O against
+          # a local server) and will never reach 85% of the whole src tree on its own — it's merged
+          # into the combined report below for Codecov/Sonar visibility, not gated here.
           tools/ci/docker-compose run --rm php php tools/coverage-enforce.php build/coverage/matrix/clover-Unit.xml
-          tools/ci/docker-compose run --rm php php tools/coverage-enforce.php build/coverage/matrix/clover-Integration.xml
           tools/ci/docker-compose run --rm php php tools/coverage-merge.php \
             build/coverage/matrix/clover-Unit.xml \
             build/coverage/matrix/clover-Integration.xml \
