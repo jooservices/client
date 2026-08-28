@@ -9,6 +9,10 @@ All notable changes to this package are documented in this file. Format follows 
 
 ## [Unreleased]
 
+### Added
+
+- `RequestBuilder::withMultipart()` builds `multipart/form-data` bodies (text fields, files, PSR-7 streams) with a generated boundary and matching `Content-Type` header.
+
 ## [4.1.0] - 2026-08-28
 
 ### Fixed

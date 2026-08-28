@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JOOservices\Client\Tests\Unit\Request;
 
 use JOOservices\Client\Exceptions\InvalidConfigurationException;
+use JOOservices\Client\Request\MultipartPart;
 use JOOservices\Client\Request\RequestBuilder;
 use JOOservices\Client\Tests\Fixtures\UserDto;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -103,5 +104,120 @@ final class RequestBuilderTest extends TestCase
         self::assertSame(2.0, $prepared->options()->connectTimeout);
         self::assertFalse($prepared->options()->verifySsl);
         self::assertFalse($prepared->options()->allowRedirects);
+    }
+
+    #[Test]
+    public function testBuildsAMultipartBodyWithFieldsAndAFile(): void
+    {
+        $factory = new Psr17Factory();
+        $handle = $this->handle("hello\0world");
+        $prepared = RequestBuilder::create($factory, $factory, $factory)
+            ->post('/media')
+            ->withHeader('Content-Type', 'application/json')
+            ->withMultipart([
+                ['name' => 'title', 'contents' => 'Photo'],
+                ['name' => 'file', 'contents' => $handle, 'filename' => 'a.bin', 'contentType' => 'application/octet-stream'],
+            ])
+            ->build();
+
+        $psr = $prepared->toPsr();
+        $type = $psr->getHeaderLine('Content-Type');
+        self::assertMatchesRegularExpression('/^multipart\/form-data; boundary=[0-9a-f]{32}$/', $type);
+        $boundary = substr($type, strlen('multipart/form-data; boundary='));
+        $body = (string) $psr->getBody();
+        self::assertSame($psr->getBody()->getSize(), strlen($body));
+        self::assertStringContainsString("name=\"title\"\r\n\r\nPhoto\r\n", $body);
+        self::assertStringContainsString('filename="a.bin"', $body);
+        self::assertStringContainsString("hello\0world", $body);
+        self::assertStringEndsWith("--{$boundary}--\r\n", $body);
+        fclose($handle);
+    }
+
+    #[Test]
+    public function testMultipartAcceptsPartObjectsAndRewindsForASecondRead(): void
+    {
+        $factory = new Psr17Factory();
+        $stream = $factory->createStream('file-bytes');
+        $prepared = RequestBuilder::create($factory, $factory, $factory)
+            ->post('/media')
+            ->withMultipart([
+                new MultipartPart('note', 'ok'),
+                new MultipartPart('file', $stream, 'n.txt', 'text/plain'),
+            ])
+            ->build();
+
+        $body = $prepared->toPsr()->getBody();
+        $first = $body->getContents();
+        $body->rewind();
+        self::assertSame($first, $body->getContents());
+        self::assertStringContainsString('name="note"', $first);
+        self::assertStringContainsString('filename="n.txt"', $first);
+        self::assertStringContainsString('Content-Type: text/plain', $first);
+    }
+
+    #[Test]
+    public function testMultipartUsesBlobFilenameWhenAStreamHasNoFilename(): void
+    {
+        $factory = new Psr17Factory();
+        $psr = RequestBuilder::create($factory, $factory, $factory)
+            ->post('/media')
+            ->withMultipart([['name' => 'file', 'contents' => $factory->createStream('x')]])
+            ->toPsr();
+
+        self::assertStringContainsString('filename="blob"', (string) $psr->getBody());
+        self::assertStringContainsString('Content-Type: application/octet-stream', (string) $psr->getBody());
+    }
+
+    #[Test]
+    public function testJsonAfterMultipartReplacesTheContentType(): void
+    {
+        $factory = new Psr17Factory();
+        $psr = RequestBuilder::create($factory, $factory, $factory)
+            ->post('/media')
+            ->withMultipart([['name' => 'title', 'contents' => 'Photo']])
+            ->withJson(['ok' => true])
+            ->toPsr();
+
+        self::assertSame('application/json', $psr->getHeaderLine('Content-Type'));
+        self::assertSame('{"ok":true}', (string) $psr->getBody());
+    }
+
+    #[Test]
+    public function testRejectsAnEmptyMultipartPartList(): void
+    {
+        $factory = new Psr17Factory();
+        $this->expectException(InvalidConfigurationException::class);
+        RequestBuilder::create($factory, $factory, $factory)->post('/media')->withMultipart([]);
+    }
+
+    #[Test]
+    public function testRejectsHeaderInjectionInMultipartNames(): void
+    {
+        $factory = new Psr17Factory();
+        $this->expectException(InvalidConfigurationException::class);
+        RequestBuilder::create($factory, $factory, $factory)
+            ->post('/media')
+            ->withMultipart([['name' => "file\r\nX-Injected: 1", 'contents' => 'x']]);
+    }
+
+    #[Test]
+    public function testRejectsCrLfInMultipartTextFields(): void
+    {
+        $factory = new Psr17Factory();
+        $this->expectException(InvalidConfigurationException::class);
+        RequestBuilder::create($factory, $factory, $factory)
+            ->post('/media')
+            ->withMultipart([['name' => 'title', 'contents' => "safe\r\n--forged"]]);
+    }
+
+    /** @return resource */
+    private function handle(string $content): mixed
+    {
+        $handle = fopen('php://temp', 'r+b');
+        self::assertIsResource($handle);
+        fwrite($handle, $content);
+        rewind($handle);
+
+        return $handle;
     }
 }
