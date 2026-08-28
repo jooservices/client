@@ -17,5 +17,6 @@ final class BaseUriTest extends TestCase
         self::assertSame('https://abc.com/v1/', $base->normalize('https://abc.com/v1'));
         self::assertSame('https://abc.com/v1/', $base->normalize('https://abc.com/v1/'));
         self::assertSame('https://abc.com/', $base->normalize('https://abc.com'));
+        self::assertSame('https://site.example.test/wp-json/', $base->normalize('https://site.example.test/wp-json'));
     }
 }

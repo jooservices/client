@@ -96,11 +96,12 @@ final class HttpClient implements ClientInterface
             throw new RequestException($request, 'Protocol-relative URIs are not resolved against the base URI.');
         }
 
-        if ($this->config->baseUri === '') {
+        $baseUri = $this->support->baseUris->normalize($this->config->baseUri);
+        if ($baseUri === '') {
             throw new RequestException($request, 'A relative URI requires a configured base URI.');
         }
 
-        $resolved = $this->support->resolver->resolve($this->support->uris->createUri($this->config->baseUri), $uri);
+        $resolved = $this->support->resolver->resolve($this->support->uris->createUri($baseUri), $uri);
         if ($resolved->getScheme() === '' || $resolved->getHost() === '') {
             throw new RequestException($request, 'The request URI could not be resolved to an absolute HTTP URI.');
         }

@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace JOOservices\Client\Tests\Unit\Client;
 
 use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Client\HttpClient;
+use JOOservices\Client\Client\HttpClientSupport;
+use JOOservices\Client\Dto\ClientConfig;
 use JOOservices\Client\Exceptions\InvalidConfigurationException;
 use JOOservices\Client\Exceptions\NetworkConnectionException;
 use JOOservices\Client\Exceptions\RequestException;
+use JOOservices\Client\Middleware\MiddlewarePipeline;
 use JOOservices\Client\Response\Response;
 use JOOservices\Client\Testing\FakeTransport;
 use JOOservices\Client\Tests\Fixtures\UserDto;
@@ -75,6 +79,26 @@ final class HttpClientTest extends TestCase
         $client->sendRequest($client->requestBuilder()->get('/users')->toPsr());
 
         self::assertSame('https://api.example.test/users', (string) $transport->recorded()[0]['request']->getUri());
+    }
+
+    #[Test]
+    public function testRelativePathKeepsABaseUriDirectoryWithoutATrailingSlash(): void
+    {
+        $transport = (new FakeTransport())->push(new PsrResponse());
+        $factory = new Psr17Factory();
+        $client = new HttpClient(
+            $transport,
+            new MiddlewarePipeline([], $transport),
+            new ClientConfig(baseUri: 'https://site.example.test/wp-json'),
+            new HttpClientSupport($factory, $factory, $factory),
+        );
+
+        $client->sendRequest($factory->createRequest('GET', 'wp/v2/posts'));
+
+        self::assertSame(
+            'https://site.example.test/wp-json/wp/v2/posts',
+            (string) $transport->recorded()[0]['request']->getUri(),
+        );
     }
 
     #[Test]

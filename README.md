@@ -44,7 +44,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 
 **Core**
 
-- PSR-18 `HttpClient` built through the immutable `ClientBuilder`; base URI resolution rejects protocol-relative URIs
+- PSR-18 `HttpClient` built through the immutable `ClientBuilder`; base URI is treated as a directory prefix (trailing slash added) and protocol-relative URIs are rejected
 - Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` / `withMultipart()` (auto `Content-Type`)
 - `Response::from()`: status helpers, header access, BOM-stripping cached JSON, 100 MB body ceiling, `throw()`, `toPsrResponse()` escape hatch
 - Per-request portable options layered over builder defaults
