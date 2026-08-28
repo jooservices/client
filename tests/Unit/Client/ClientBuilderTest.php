@@ -188,6 +188,44 @@ final class ClientBuilderTest extends TestCase
     }
 
     #[Test]
+    public function testCanonicalOrderAppliesWithoutAnOrderPresetSoFallbackStaysOutsideRetry(): void
+    {
+        $request = new \Nyholm\Psr7\Request('GET', 'https://api.test');
+        $transport = (new FakeTransport())
+            ->push(new \JOOservices\Client\Exceptions\NetworkConnectionException($request, 'boom'))
+            ->push(new \Nyholm\Psr7\Response(200, [], 'recovered'));
+
+        $client = ClientBuilder::create()
+            ->withTransport($transport)
+            ->withSleeper(new NullSleeper())
+            ->withRetry(new RetryConfig(maxAttempts: 3), new NullSleeper())
+            ->withFallback(static fn(RequestInterface $req): \Psr\Http\Message\ResponseInterface => new \Nyholm\Psr7\Response(200, [], 'fallback-used'))
+            ->build();
+
+        $response = $client->sendRequest($client->requestBuilder()->get('https://api.test')->toPsr());
+
+        self::assertSame('recovered', (string) $response->getBody());
+        self::assertCount(2, $transport->recorded());
+    }
+
+    #[Test]
+    public function testBuildRejectsUnrankedCustomMiddleware(): void
+    {
+        $marker = new class implements \JOOservices\Client\Contracts\MiddlewareInterface {
+            public function process(RequestInterface $request, \JOOservices\Client\Dto\RequestOptions $options, \JOOservices\Client\Contracts\RequestHandlerInterface $handler): \Psr\Http\Message\ResponseInterface
+            {
+                return $handler->handle($request, $options);
+            }
+        };
+
+        $this->expectException(InvalidConfigurationException::class);
+        ClientBuilder::create()
+            ->withTransport(new FakeTransport())
+            ->withMiddleware($marker, 'my-custom')
+            ->build();
+    }
+
+    #[Test]
     public function testInsertMiddlewareBeforeAnchorIsHonoredAfterAPresetOrderIsApplied(): void
     {
         $marker = new class implements \JOOservices\Client\Contracts\MiddlewareInterface {

@@ -19,7 +19,7 @@ final class LogSanitizer
                 $context[$key] = $this->sanitize($value);
             } elseif (is_string($value)) {
                 $value = preg_replace('/(:\/\/)[^\/\s@]+:[^\/\s@]*@/', '$1[redacted]@', $value) ?? $value;
-                $context[$key] = preg_replace('/([?&][\w-]*(?:token|api[_-]?key|password|secret|sig|signature|auth|jwt|session|sid)[\w-]*=)[^&]*/i', '$1[redacted]', $value) ?? $value;
+                $context[$key] = preg_replace('/([?&][\w-]*(?:token|api[_-]?key|password|secret|sig|signature|auth|jwt|session|sid|credential)[\w-]*=)[^&]*/i', '$1[redacted]', $value) ?? $value;
             }
         }
 
@@ -30,7 +30,8 @@ final class LogSanitizer
     {
         // A signature (e.g. HmacSha256Signer's X-Signature) is replayable if leaked and the signed
         // payload has no timestamp/nonce, so it belongs in the same bucket as the other secrets here —
-        // this list must stay in sync with the query-string pattern in sanitize() above.
-        return preg_match('/authorization|cookie|token|api[_-]?key|password|secret|sig(nature)?|jwt|session|sid/i', $key) === 1;
+        // this list must stay in sync with the query-string pattern in sanitize() above and with
+        // RedirectHandler's needles (token, secret, password, credential).
+        return preg_match('/authorization|cookie|token|api[_-]?key|password|secret|sig(nature)?|jwt|session|sid|credential/i', $key) === 1;
     }
 }

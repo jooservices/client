@@ -121,6 +121,11 @@ final class CacheMiddleware implements MiddlewareInterface
 
         $headers = [];
         foreach ($response->getHeaders() as $name => $values) {
+            // Never persist Set-Cookie*: a later caller that shares the cache key would otherwise
+            // replay the origin's session cookies. Cookie is already part of the key principal.
+            if (in_array(strtolower((string) $name), ['set-cookie', 'set-cookie2'], true)) {
+                continue;
+            }
             $headers[(string) $name] = array_values($values);
         }
 

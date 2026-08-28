@@ -7,6 +7,15 @@ All notable changes to this package are documented in this file. Format follows 
 > Earlier releases belong to the archived previous implementation and are **not ancestors** of this line.
 > **There is no backward compatibility with any previous version:** no shims, no deprecation bridges, no migration path. Upgrading means rewriting call sites against the new API.
 
+## [Unreleased]
+
+### Fixed
+
+- Apply the canonical middleware order on `build()` by default. `withStandardMiddlewareOrder()` and `withProductionMiddlewareOrder()` remain explicit aliases of the same ranked list.
+- Include `Cookie` in the HTTP cache key principal and omit `Set-Cookie` / `Set-Cookie2` from stored responses so cookie sessions cannot leak across callers.
+- Bracket IPv6 addresses in cURL `CURLOPT_RESOLVE` pins (`host:port:[2001:db8::1]`).
+- Sanitize exception messages in `LoggingMiddleware` (cURL errors often embed URLs with query secrets) and treat `credential` as a secret needle in `LogSanitizer`.
+
 ## [4.0.0] - 2026-08-25
 
 - Rebuilt the client around PSR-7, PSR-17 and PSR-18.

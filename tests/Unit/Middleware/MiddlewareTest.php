@@ -222,6 +222,47 @@ final class MiddlewareTest extends TestCase
     }
 
     #[Test]
+    public function testCacheDoesNotShareEntriesAcrossDifferentCookieHeaders(): void
+    {
+        $factory = new Psr17Factory();
+        $cache = new CacheMiddleware($factory, $factory, new CacheConfig(60));
+        $request = $this->request();
+
+        $sessionA = (new FakeTransport())->push(new Response(200, [], 'body-for-session-a'));
+        $responseA = $cache->process($request->withHeader('Cookie', 'session=aaa'), new RequestOptions(), $sessionA);
+        self::assertSame('body-for-session-a', (string) $responseA->getBody());
+        self::assertCount(1, $sessionA->recorded());
+
+        $sessionB = (new FakeTransport())->push(new Response(200, [], 'body-for-session-b'));
+        $responseB = $cache->process($request->withHeader('Cookie', 'session=bbb'), new RequestOptions(), $sessionB);
+        self::assertSame('body-for-session-b', (string) $responseB->getBody());
+        self::assertCount(1, $sessionB->recorded());
+    }
+
+    #[Test]
+    public function testCacheDoesNotReplaySetCookieFromAStoredResponse(): void
+    {
+        $factory = new Psr17Factory();
+        $cache = new CacheMiddleware($factory, $factory, new CacheConfig(60));
+        $request = $this->request();
+
+        $origin = (new FakeTransport())->push(new Response(
+            200,
+            ['Set-Cookie' => 'session=secret; Path=/', 'Set-Cookie2' => 'legacy=1', 'X-Ok' => 'yes'],
+            'cached-body',
+        ));
+        $first = $cache->process($request, new RequestOptions(), $origin);
+        self::assertSame(['session=secret; Path=/'], $first->getHeader('Set-Cookie'));
+        self::assertSame('cached-body', (string) $first->getBody());
+
+        $cached = $cache->process($request, new RequestOptions(), (new FakeTransport())->push(new Response(200, [], 'should-not-be-used')));
+        self::assertSame('cached-body', (string) $cached->getBody());
+        self::assertSame([], $cached->getHeader('Set-Cookie'));
+        self::assertSame([], $cached->getHeader('Set-Cookie2'));
+        self::assertSame(['yes'], $cached->getHeader('X-Ok'));
+    }
+
+    #[Test]
     public function testCacheDoesNotStoreARedirectResponse(): void
     {
         $factory = new Psr17Factory();
@@ -702,6 +743,45 @@ final class MiddlewareTest extends TestCase
 
         $this->expectException(\JOOservices\Client\Exceptions\ResponseValidationException::class);
         (new ResponseValidationMiddleware(static fn(): bool => false))->process($this->request(), new RequestOptions(), (new FakeTransport())->push(new Response()));
+    }
+
+    #[Test]
+    public function testLoggingSanitizesSecretsInExceptionMessages(): void
+    {
+        $spyLogger = new class extends \Psr\Log\AbstractLogger {
+            /** @var list<array{level: string, context: array<mixed>}> */
+            public array $records = [];
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                $this->records[] = [
+                    'level' => is_scalar($level) ? (string) $level : gettype($level),
+                    'context' => $context,
+                ];
+            }
+        };
+        $failingTransport = (new FakeTransport())->push(new NetworkConnectionException(
+            $this->request(),
+            'Failed to connect to https://api.example.test/callback?oauth_token=abc&oauth_signature=xyz',
+        ));
+
+        try {
+            (new LoggingMiddleware($spyLogger))->process($this->request(), new RequestOptions(), $failingTransport);
+            self::fail('Expected the network exception to propagate.');
+        } catch (NetworkConnectionException) {
+            // expected
+        }
+
+        $errorRecords = array_values(array_filter(
+            $spyLogger->records,
+            static fn(array $record): bool => $record['level'] === 'error',
+        ));
+        self::assertCount(1, $errorRecords);
+        $error = $errorRecords[0]['context']['error'] ?? null;
+        self::assertIsString($error);
+        self::assertStringNotContainsString('oauth_token=abc', $error);
+        self::assertStringNotContainsString('oauth_signature=xyz', $error);
+        self::assertStringContainsString('oauth_token=[redacted]', $error);
+        self::assertStringContainsString('oauth_signature=[redacted]', $error);
     }
 
     private function request(): RequestInterface
