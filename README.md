@@ -5,6 +5,7 @@
 [![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=jooservices_client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jooservices_client)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jooservices/client/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jooservices/client)
 [![PHP Version](https://img.shields.io/badge/PHP-8.5%2B-blue.svg)](https://www.php.net/)
+[![Release](https://img.shields.io/badge/version-4.1.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries included: fluent request building, a ranked middleware pipeline, resilience (retry, circuit breaker, rate limit, bulkhead, fallback, deadline), hardened security defaults, response-to-DTO mapping via `jooservices/dto`, and deterministic test fakes.
@@ -18,7 +19,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 
 | | |
 | --- | --- |
-| Status | **`v4.0.0` — first public release** |
+| Status | **`v4.1.0` — current release** |
 | First public line | `v4.0.0` — earlier releases belong to the retired implementation ([changelog](CHANGELOG.md) starts here) |
 | Compatibility | **None with older versions.** Client verbs (`$client->get()`, `post()`, …) and Guzzle-style option bags are removed |
 | Core contract | PSR-18 `sendRequest(RequestInterface)` — HTTP 4xx/5xx responses are returned, never thrown |
@@ -54,7 +55,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 - Resilience: retry, circuit breaker, rate limit, bulkhead, fallback, deadline, request coalescing
 - Auth/security: authentication, OAuth token refresh, HMAC request signing, idempotency keys, WAN-IP awareness
 - DX: user agent (fixed / generated / rotating), API version, cache, response validation, interceptors (`onRequest()` / `onResponse()` / `onError()`)
-- Canonical fixed ordering with presets (`withStandardMiddlewareOrder()`, `withProductionMiddlewareOrder()`) and explicit insertion via `insertMiddlewareBefore()` / `insertMiddlewareAfter()`; unranked middleware is rejected
+- Canonical outermost-to-innermost ranking is applied on `build()` by default. `withStandardMiddlewareOrder()` and `withProductionMiddlewareOrder()` are explicit aliases of that same ranked list; custom middleware must be placed with `insertMiddlewareBefore()` / `insertMiddlewareAfter()` or `build()` rejects it as unranked
 
 **Resilience state**
 

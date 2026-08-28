@@ -35,7 +35,7 @@ final class LoggingMiddleware implements MiddlewareInterface
 
             return $response;
         } catch (Throwable $error) {
-            $this->logger->error('HTTP client failure', ['error' => $error->getMessage(), 'uri' => $context['uri']]);
+            $this->logger->error('HTTP client failure', $this->sanitizer->sanitize(['error' => $error->getMessage(), 'uri' => $context['uri']]));
             throw $error;
         }
     }

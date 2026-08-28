@@ -29,6 +29,9 @@ final class SupportUtilitiesTest extends TestCase
         $oauthSanitized = (new LogSanitizer())->sanitize(['uri' => 'https://x.test/?access_token=abc&client_secret=def&refresh_token=ghi&sig=jkl&keep=me']);
         self::assertSame('https://x.test/?access_token=[redacted]&client_secret=[redacted]&refresh_token=[redacted]&sig=[redacted]&keep=me', $oauthSanitized['uri']);
 
+        $credentialQuery = (new LogSanitizer())->sanitize(['uri' => 'https://x.test/?credential=abc&client_credential=def']);
+        self::assertSame('https://x.test/?credential=[redacted]&client_credential=[redacted]', $credentialQuery['uri']);
+
         $credentialSanitized = (new LogSanitizer())->sanitize(['uri' => 'https://user:secretpass@api.example.com/path?token=abc']);
         self::assertSame('https://[redacted]@api.example.com/path?token=[redacted]', $credentialSanitized['uri']);
         $noCredentials = (new LogSanitizer())->sanitize(['uri' => 'https://api.example.com/path']);
@@ -44,12 +47,14 @@ final class SupportUtilitiesTest extends TestCase
             'X-Signature' => ['deadbeef'],
             'X-Jwt' => ['eyJ'],
             'X-Session-Id' => ['abc123'],
+            'X-Credential' => ['secret'],
         ]]);
         $headers = $headerContext['headers'];
         self::assertIsArray($headers);
         self::assertSame('[redacted]', $headers['X-Signature']);
         self::assertSame('[redacted]', $headers['X-Jwt']);
         self::assertSame('[redacted]', $headers['X-Session-Id']);
+        self::assertSame('[redacted]', $headers['X-Credential']);
 
         $factory = new Psr17Factory();
         $request = $factory->createRequest('POST', 'https://api.test/a')->withBody($factory->createStream('body'));

@@ -108,6 +108,29 @@ final class CurlTransportTest extends TestCase
     }
 
     #[Test]
+    public function testResolveEntriesBracketsIpv6AddressesForCurl(): void
+    {
+        $factory = new Psr17Factory();
+        $exchange = new \JOOservices\Client\Transport\Curl\CurlExchange($factory, $factory);
+        $method = new \ReflectionClass($exchange)->getMethod('resolveEntries');
+        $https = $factory->createRequest('GET', 'https://example.test/x');
+        $http = $factory->createRequest('GET', 'http://example.test/x');
+
+        self::assertSame(
+            [
+                'example.test:443:[2001:db8::1]',
+                'example.test:443:[2001:db8::2]',
+                'example.test:443:192.0.2.1',
+            ],
+            $method->invoke($exchange, $https, ['2001:db8::1', '[2001:db8::2]', '192.0.2.1']),
+        );
+        self::assertSame(
+            ['example.test:80:[::1]'],
+            $method->invoke($exchange, $http, ['::1']),
+        );
+    }
+
+    #[Test]
     public function testProxySupportsDirectValueAndNoProxyPatterns(): void
     {
         $factory = new Psr17Factory();

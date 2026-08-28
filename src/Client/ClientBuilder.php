@@ -497,16 +497,15 @@ final class ClientBuilder
         if ($this->onRequestCallback !== null || $this->onResponseCallback !== null || $this->onErrorCallback !== null) {
             $middlewares['interceptor'] = new InterceptorMiddleware($this->onRequestCallback, $this->onResponseCallback, $this->onErrorCallback);
         }
-        if ($this->middlewareOrder !== null) {
-            $unranked = array_diff(array_keys($middlewares), $this->middlewareOrder);
-            if ($unranked !== []) {
-                throw new InvalidConfigurationException(sprintf(
-                    'Middleware "%s" has no defined position in the configured middleware order; use insertMiddlewareBefore()/insertMiddlewareAfter() to place it.',
-                    implode('", "', $unranked),
-                ));
-            }
-            $middlewares = self::applyOrder($middlewares, $this->middlewareOrder);
+        $order = $this->middlewareOrder ?? self::CANONICAL_MIDDLEWARE_ORDER;
+        $unranked = array_diff(array_keys($middlewares), $order);
+        if ($unranked !== []) {
+            throw new InvalidConfigurationException(sprintf(
+                'Middleware "%s" has no defined position in the configured middleware order; use insertMiddlewareBefore()/insertMiddlewareAfter() to place it.',
+                implode('", "', $unranked),
+            ));
         }
+        $middlewares = self::applyOrder($middlewares, $order);
 
         $connection = new ClientConnection(
             $this->baseUri,
@@ -551,9 +550,12 @@ final class ClientBuilder
             }
         }
         $copy->middlewares = $result;
-        if ($copy->middlewareOrder !== null) {
-            $copy->middlewareOrder = self::spliceOrder($copy->middlewareOrder, $anchor, $name, $after);
-        }
+        $copy->middlewareOrder = self::spliceOrder(
+            $copy->middlewareOrder ?? self::CANONICAL_MIDDLEWARE_ORDER,
+            $anchor,
+            $name,
+            $after,
+        );
 
         return $copy;
     }
