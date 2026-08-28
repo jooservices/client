@@ -9,6 +9,8 @@ All notable changes to this package are documented in this file. Format follows 
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-08-28
+
 ### Fixed
 
 - Apply the canonical middleware order on `build()` by default. `withStandardMiddlewareOrder()` and `withProductionMiddlewareOrder()` remain explicit aliases of the same ranked list.
@@ -22,3 +24,8 @@ All notable changes to this package are documented in this file. Format follows 
 - Added outbound middleware, resilience, transports and deterministic fakes.
 - Added cross-origin redirect credential protection and public-to-private redirect policy.
 - Added streaming cURL bodies, PSR-16 resilience adapters, optional JSON Schema validation, WAN-IP middleware, reusable fakes, Docker quality gates, CI/release workflows and benchmark support.
+
+[Unreleased]: https://github.com/jooservices/client/compare/v4.1.0...HEAD
+[4.1.0]: https://github.com/jooservices/client/compare/v4.0.0...v4.1.0
+[4.0.0]: https://github.com/jooservices/client/releases/tag/v4.0.0
+

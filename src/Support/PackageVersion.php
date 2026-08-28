@@ -19,9 +19,9 @@ final class PackageVersion
             // getPrettyVersion() throws (rather than returning null) when the package isn't registered
             // in installed.php at all — a non-standard install layout, PHAR bundling, or a stale
             // autoloader cache. The null-return fallback below never runs for that case; this does.
-            return '4.0.0-dev';
+            return '4.1.0-dev';
         }
 
-        return is_string($version) ? $version : '4.0.0-dev';
+        return is_string($version) ? $version : '4.1.0-dev';
     }
 }
