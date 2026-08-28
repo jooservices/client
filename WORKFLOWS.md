@@ -102,7 +102,7 @@ flowchart TD
 ```
 
 The workflow fails if the tag is not on `origin/master`. It is therefore the
-publication path for the `4.1.0` / current 4.x line; do not tag until the maintainer
+publication path for the `4.2.0` / current 4.x line; do not tag until the maintainer
 approves the release.
 
 ## Other workflows

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JOOservices\Client\Client;
 
+use JOOservices\Client\Support\BaseUri;
 use JOOservices\Client\Support\HeaderValidator;
 use JOOservices\Client\Support\UriResolver;
 use Psr\Http\Message\RequestFactoryInterface;
@@ -19,6 +20,7 @@ final readonly class HttpClientSupport
         public HeaderValidator $headers = new HeaderValidator(),
         public UriResolver $resolver = new UriResolver(),
         public RequestOptionsAssembler $options = new RequestOptionsAssembler(),
+        public BaseUri $baseUris = new BaseUri(),
     ) {
     }
 }

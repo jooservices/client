@@ -27,6 +27,17 @@ final class UriResolverTest extends TestCase
     }
 
     #[Test]
+    public function testMergeWithoutTrailingSlashDropsTheLastBaseSegmentPerRfc3986(): void
+    {
+        $factory = new Psr17Factory();
+        $resolved = new UriResolver()->resolve(
+            $factory->createUri('https://site.example.test/wp-json'),
+            $factory->createUri('wp/v2/posts'),
+        );
+        self::assertSame('https://site.example.test/wp/v2/posts', (string) $resolved);
+    }
+
+    #[Test]
     public function testNoDoubleSlashWhenBaseEndsWithSlash(): void
     {
         $factory = new Psr17Factory();

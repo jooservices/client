@@ -9,6 +9,16 @@ All notable changes to this package are documented in this file. Format follows 
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-08-28
+
+### Added
+
+- `RequestBuilder::withMultipart()` builds `multipart/form-data` bodies (text fields, files, PSR-7 streams) with a generated boundary and matching `Content-Type` header.
+
+### Fixed
+
+- Keep the last base-URI path segment when sending a relative request if the configured value has no trailing slash (`https://site/wp-json` + `wp/v2/posts`).
+
 ## [4.1.0] - 2026-08-28
 
 ### Fixed
@@ -25,7 +35,8 @@ All notable changes to this package are documented in this file. Format follows 
 - Added cross-origin redirect credential protection and public-to-private redirect policy.
 - Added streaming cURL bodies, PSR-16 resilience adapters, optional JSON Schema validation, WAN-IP middleware, reusable fakes, Docker quality gates, CI/release workflows and benchmark support.
 
-[Unreleased]: https://github.com/jooservices/client/compare/v4.1.0...HEAD
+[Unreleased]: https://github.com/jooservices/client/compare/v4.2.0...HEAD
+[4.2.0]: https://github.com/jooservices/client/compare/v4.1.0...v4.2.0
 [4.1.0]: https://github.com/jooservices/client/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/jooservices/client/releases/tag/v4.0.0
 

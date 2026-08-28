@@ -6,6 +6,7 @@ namespace JOOservices\Client\Tests\Integration;
 
 use JOOservices\Client\Dto\RequestOptions;
 use JOOservices\Client\Exceptions\DownloadSizeExceededException;
+use JOOservices\Client\Request\RequestBuilder;
 use JOOservices\Client\Transport\Curl\CurlExchange;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
@@ -67,6 +68,56 @@ final class CurlExchangeTest extends TestCase
             self::assertSame(200, $response->getStatusCode());
             self::assertSame((string) strlen($payload), $response->getHeaderLine('X-Received-Length'));
             self::assertSame($payload, (string) $response->getBody());
+        } finally {
+            proc_terminate($process);
+            foreach ($pipes as $pipe) {
+                fclose($pipe);
+            }
+            proc_close($process);
+        }
+    }
+
+    #[Test]
+    public function testSendsAMultipartBodyIntactOverTheWire(): void
+    {
+        $port = random_int(20000, 40000);
+        $command = [PHP_BINARY, '-S', '127.0.0.1:' . $port, '-t', dirname(__DIR__) . '/Fixtures'];
+        $process = proc_open($command, [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes);
+        self::assertIsResource($process);
+        usleep(100_000);
+
+        try {
+            $factory = new Psr17Factory();
+            $handle = fopen('php://temp', 'r+b');
+            self::assertIsResource($handle);
+            fwrite($handle, "hello\0world");
+            rewind($handle);
+            $request = RequestBuilder::create($factory, $factory, $factory)
+                ->post('http://127.0.0.1:' . $port . '/echo-multipart.php')
+                ->withMultipart([
+                    ['name' => 'title', 'contents' => 'Photo'],
+                    ['name' => 'file', 'contents' => $handle, 'filename' => 'a.bin', 'contentType' => 'application/octet-stream'],
+                ])
+                ->toPsr();
+            $response = (new CurlExchange($factory, $factory))->send($request, new RequestOptions(timeout: 2, connectTimeout: 2));
+            $payload = json_decode((string) $response->getBody(), true);
+
+            self::assertSame(200, $response->getStatusCode());
+            self::assertIsArray($payload);
+            $post = $payload['post'] ?? null;
+            $files = $payload['files'] ?? null;
+            self::assertIsArray($post);
+            self::assertIsArray($files);
+            $file = $files['file'] ?? null;
+            self::assertIsArray($file);
+            self::assertSame('Photo', $post['title'] ?? null);
+            self::assertSame('a.bin', $file['name'] ?? null);
+            self::assertSame("hello\0world", $file['contents'] ?? null);
+            fclose($handle);
         } finally {
             proc_terminate($process);
             foreach ($pipes as $pipe) {

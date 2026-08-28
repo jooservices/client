@@ -5,7 +5,7 @@
 [![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=jooservices_client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jooservices_client)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jooservices/client/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jooservices/client)
 [![PHP Version](https://img.shields.io/badge/PHP-8.5%2B-blue.svg)](https://www.php.net/)
-[![Release](https://img.shields.io/badge/version-4.1.0-blue.svg)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/version-4.2.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries included: fluent request building, a ranked middleware pipeline, resilience (retry, circuit breaker, rate limit, bulkhead, fallback, deadline), hardened security defaults, response-to-DTO mapping via `jooservices/dto`, and deterministic test fakes.
@@ -19,7 +19,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 
 | | |
 | --- | --- |
-| Status | **`v4.1.0` — current release** |
+| Status | **`v4.2.0` — current release** |
 | First public line | `v4.0.0` — earlier releases belong to the retired implementation ([changelog](CHANGELOG.md) starts here) |
 | Compatibility | **None with older versions.** Client verbs (`$client->get()`, `post()`, …) and Guzzle-style option bags are removed |
 | Core contract | PSR-18 `sendRequest(RequestInterface)` — HTTP 4xx/5xx responses are returned, never thrown |
@@ -44,8 +44,8 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 
 **Core**
 
-- PSR-18 `HttpClient` built through the immutable `ClientBuilder`; base URI resolution rejects protocol-relative URIs
-- Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` (auto `Content-Type`)
+- PSR-18 `HttpClient` built through the immutable `ClientBuilder`; base URI is treated as a directory prefix (trailing slash added) and protocol-relative URIs are rejected
+- Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` / `withMultipart()` (auto `Content-Type`)
 - `Response::from()`: status helpers, header access, BOM-stripping cached JSON, 100 MB body ceiling, `throw()`, `toPsrResponse()` escape hatch
 - Per-request portable options layered over builder defaults
 
@@ -115,6 +115,11 @@ $client = ClientBuilder::create()
 
 // Fluent request construction → PreparedRequest (PSR-7 form + portable options)
 $request = $client->requestBuilder()->post('users')->withJson($user)->build();
+
+$upload = $client->requestBuilder()->post('media')->withMultipart([
+    ['name' => 'title', 'contents' => 'Photo'],
+    ['name' => 'file', 'contents' => fopen($photoPath, 'rb'), 'filename' => 'photo.jpg', 'contentType' => 'image/jpeg'],
+])->build();
 
 // PSR-18 send; per-request options override builder defaults
 $psrResponse = $client->send($request->toPsr(), $request->options());
