@@ -44,8 +44,8 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 
 **Core**
 
-- PSR-18 `HttpClient` built through the immutable `ClientBuilder`; base URI resolution rejects protocol-relative URIs
-- Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` (auto `Content-Type`)
+- PSR-18 `HttpClient` built through the immutable `ClientBuilder`; base URI is treated as a directory prefix (trailing slash added) and protocol-relative URIs are rejected
+- Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` / `withMultipart()` (auto `Content-Type`)
 - `Response::from()`: status helpers, header access, BOM-stripping cached JSON, 100 MB body ceiling, `throw()`, `toPsrResponse()` escape hatch
 - Per-request portable options layered over builder defaults
 
@@ -115,6 +115,11 @@ $client = ClientBuilder::create()
 
 // Fluent request construction → PreparedRequest (PSR-7 form + portable options)
 $request = $client->requestBuilder()->post('users')->withJson($user)->build();
+
+$upload = $client->requestBuilder()->post('media')->withMultipart([
+    ['name' => 'title', 'contents' => 'Photo'],
+    ['name' => 'file', 'contents' => fopen($photoPath, 'rb'), 'filename' => 'photo.jpg', 'contentType' => 'image/jpeg'],
+])->build();
 
 // PSR-18 send; per-request options override builder defaults
 $psrResponse = $client->send($request->toPsr(), $request->options());

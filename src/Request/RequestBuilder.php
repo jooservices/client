@@ -12,6 +12,7 @@ use JsonSerializable;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriFactoryInterface;
 
 final class RequestBuilder
@@ -23,7 +24,7 @@ final class RequestBuilder
     /** @var array<string, string|list<string>> */
     private array $headers = [];
 
-    private string $body = '';
+    private string|StreamInterface $body = '';
 
     private RequestOptions $options;
 
@@ -164,10 +165,27 @@ final class RequestBuilder
         $copy->body = $body;
         return $copy;
     }
+
+    /**
+     * @param list<MultipartPart|array<string, mixed>> $parts
+     */
+    public function withMultipart(array $parts): self
+    {
+        $stream = new MultipartStream($parts);
+        $copy = clone $this;
+        $copy->body = $stream;
+
+        return $this->replaceHeader($copy, 'Content-Type', 'multipart/form-data; boundary=' . $stream->boundary());
+    }
+
     /** @param array<array-key, mixed>|JsonSerializable $data @throws JsonException */
     public function withJson(array|JsonSerializable $data): self
     {
+        $replaceMultipartType = $this->body instanceof MultipartStream;
         $copy = $this->withBody(json_encode($data, JSON_THROW_ON_ERROR));
+        if ($replaceMultipartType) {
+            return $this->replaceHeader($copy, 'Content-Type', 'application/json');
+        }
 
         foreach (array_keys($copy->headers) as $header) {
             if (strcasecmp($header, 'Content-Type') === 0) {
@@ -209,7 +227,8 @@ final class RequestBuilder
         if ($this->uri === '') {
             throw new InvalidConfigurationException('A request URI is required.');
         }
-        $request = $this->requestFactory->createRequest($this->method, $this->uri)->withBody($this->streamFactory->createStream($this->body));
+        $body = $this->body instanceof StreamInterface ? $this->body : $this->streamFactory->createStream($this->body);
+        $request = $this->requestFactory->createRequest($this->method, $this->uri)->withBody($body);
         foreach ($this->headers as $name => $value) {
             $request = $request->withHeader($name, $value);
         }
@@ -228,6 +247,17 @@ final class RequestBuilder
     public function options(): RequestOptions
     {
         return $this->build()->options();
+    }
+
+    private function replaceHeader(self $copy, string $name, string $value): self
+    {
+        foreach (array_keys($copy->headers) as $header) {
+            if (strcasecmp($header, $name) === 0) {
+                unset($copy->headers[$header]);
+            }
+        }
+
+        return $copy->withHeader($name, $value);
     }
 
     /**
