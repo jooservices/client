@@ -4,7 +4,8 @@
 
 | Version line | Status |
 | --- | --- |
-| `4.0.x` (this repository) | Supported |
+| `4.1.x` (this repository) | Current supported |
+| `4.0.x` | Supported |
 | `v3.x` and earlier | **End of life.** The archived previous implementation is a separate codebase lineage and receives no fixes |
 
 The rebuild has **no backward compatibility** with older lines; security reports against archived versions cannot be actioned here.
