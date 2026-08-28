@@ -55,7 +55,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 - Resilience: retry, circuit breaker, rate limit, bulkhead, fallback, deadline, request coalescing
 - Auth/security: authentication, OAuth token refresh, HMAC request signing, idempotency keys, WAN-IP awareness
 - DX: user agent (fixed / generated / rotating), API version, cache, response validation, interceptors (`onRequest()` / `onResponse()` / `onError()`)
-- Canonical fixed ordering with presets (`withStandardMiddlewareOrder()`, `withProductionMiddlewareOrder()`) and explicit insertion via `insertMiddlewareBefore()` / `insertMiddlewareAfter()`; unranked middleware is rejected
+- Canonical outermost-to-innermost ranking is applied on `build()` by default. `withStandardMiddlewareOrder()` and `withProductionMiddlewareOrder()` are explicit aliases of that same ranked list; custom middleware must be placed with `insertMiddlewareBefore()` / `insertMiddlewareAfter()` or `build()` rejects it as unranked
 
 **Resilience state**
 

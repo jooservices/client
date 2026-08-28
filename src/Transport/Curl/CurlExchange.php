@@ -123,7 +123,18 @@ final class CurlExchange
         $host = $request->getUri()->getHost();
         $port = $request->getUri()->getPort() ?? (strtolower($request->getUri()->getScheme()) === 'https' ? 443 : 80);
 
-        return array_map(static fn(string $address): string => sprintf('%s:%d:%s', $host, $port, $address), $addresses);
+        return array_map(
+            static fn(string $address): string => sprintf('%s:%d:%s', $host, $port, self::formatPinnedAddress($address)),
+            $addresses,
+        );
+    }
+
+    /** libcurl's CURLOPT_RESOLVE requires IPv6 as host:port:[2001:db8::1], not host:port:2001:db8::1. */
+    private static function formatPinnedAddress(string $address): string
+    {
+        $address = trim($address, '[]');
+
+        return str_contains($address, ':') ? '[' . $address . ']' : $address;
     }
 
     /** @return list<string> */
