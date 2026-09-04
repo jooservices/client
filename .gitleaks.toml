@@ -1,4 +1,8 @@
 title = "gitleaks"
+
+[extend]
+useDefault = true
+
 [[allowlists]]
 description = "Allowlisted files"
 paths = [
