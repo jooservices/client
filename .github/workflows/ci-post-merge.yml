@@ -1,4 +1,4 @@
-# Dedicated CI for jooservices/client — self-hosted runner1 (Linux X64)
+# Dedicated CI for jooservices/client — GitHub-hosted runners
 # Post-merge sanity run on master/develop heads. Full gate lives in ci.yml (pull requests).
 name: CI post-merge
 
@@ -17,7 +17,7 @@ permissions:
 jobs:
   validate:
     name: Validate
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -29,7 +29,7 @@ jobs:
         run: tools/ci/docker-compose build php
 
       - name: Cache Composer vendor
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: vendor-cache
         with:
           path: vendor
@@ -47,7 +47,7 @@ jobs:
   test:
     name: Test (${{ matrix.name }})
     needs: [validate]
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: true
@@ -67,7 +67,7 @@ jobs:
         run: tools/ci/docker-compose build php
 
       - name: Cache Composer vendor
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: vendor-cache
         with:
           path: vendor
@@ -96,7 +96,7 @@ jobs:
   coverage:
     name: Coverage upload
     needs: [test]
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -155,7 +155,7 @@ jobs:
           echo "host_url=${host_url}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload SonarQube analysis
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ steps.sonar-config.outputs.host_url }}
