@@ -15,7 +15,7 @@ permissions:
 jobs:
   commitlint:
     name: Validate commit messages
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
