@@ -139,11 +139,11 @@ gantt
 
 Both `master` and `develop` require pull requests with these status checks:
 `Validate`, the five `Lint (…)` legs, the three `Security (…)` legs,
-`Test (Unit)`, `Test (Integration)`, `Coverage upload`, and
-`Analyze GitHub Actions`. Strict mode requires the branch to be up to date.
-Force pushes and deletions are denied. Admins bypass protection on
-`develop` but not on `master`. Merged head branches are deleted
-automatically.
+`Test (Unit)`, `Test (Integration)`, `Coverage upload`,
+`Analyze GitHub Actions`, `Validate commit messages`, and
+`Validate PR Title`. Strict mode requires the branch to be up to date.
+Force pushes and deletions are denied. Admins cannot bypass protection on
+either branch (`enforce_admins` is on).
 
 ## Notes
 
