@@ -1,12 +1,12 @@
 # GitHub Actions workflow flow
 
 This document describes the workflows currently defined in
-`.github/workflows/`. Jobs run on the self-hosted Linux X64 runner pool;
-PHP-related commands run through the repository Docker Compose setup, which
-executes containers as the runner user (`DOCKER_UID`/`GID`) so no root-owned
-files are produced. The pull-request gate and the post-merge pass are split
-into two workflows; branch protection on `master`/`develop` requires the
-pull-request checks before merge.
+`.github/workflows/`. All jobs run on GitHub-hosted `ubuntu-latest` runners.
+PHP-related commands run through the repository Docker Compose setup
+(`tools/ci/docker-compose`), which executes containers as the runner user
+(`DOCKER_UID`/`GID`) so no root-owned files are produced. The pull-request
+gate and the post-merge pass are split into two workflows; branch protection
+on `master`/`develop` requires the pull-request checks before merge.
 
 ## Overall event flow
 
@@ -114,7 +114,7 @@ approves the release.
 | `semantic-pr.yml` | PR opened, edited, synchronized | Validate PR title type and require an uppercase first subject character. Skipped for Dependabot pull requests. |
 | `pr-labeler.yml` | PR opened, synchronized, reopened | Checkout → apply labels from `.github/labeler.yml` based on changed paths. |
 | `link-check.yml` | Monday 04:00 UTC; manual | Checkout → Lychee checks Markdown links, excluding `vendor`, Packagist, Codecov, and mail links. |
-| `scorecard.yml` | Push to `master`; Monday 00:00 UTC; manual | Runs on a GitHub-hosted Ubuntu runner (required for verifiable attestation) → OpenSSF Scorecard → upload SARIF. |
+| `scorecard.yml` | Push to `master`; Monday 00:00 UTC; manual | OpenSSF Scorecard → upload SARIF. |
 | `stale.yml` | Daily 01:00 UTC; manual | Mark issues/PRs stale after 60 inactive days; close 14 days later, except pinned/security/dependencies. |
 | `workflow-audit.yml` | `.github/**` changes on push/PR; Monday 03:00 UTC; manual | Independent jobs: Actionlint checks workflow syntax and Zizmor scans workflow security, then uploads Zizmor SARIF when produced. |
 
@@ -139,14 +139,15 @@ gantt
 
 Both `master` and `develop` require pull requests with these status checks:
 `Validate`, the five `Lint (…)` legs, the three `Security (…)` legs,
-`Test (Unit)`, `Test (Integration)`, `Coverage upload`, and
-`Analyze GitHub Actions`. Strict mode requires the branch to be up to date.
-Force pushes and deletions are denied. Admins bypass protection on
-`develop` but not on `master`. Merged head branches are deleted
-automatically.
+`Test (Unit)`, `Test (Integration)`, `Coverage upload`,
+`Analyze GitHub Actions`, `Validate commit messages`, and
+`Validate PR Title`. Strict mode requires the branch to be up to date.
+Force pushes and deletions are denied. Admins cannot bypass protection on
+either branch (`enforce_admins` is on).
 
 ## Notes
 
+- All jobs use GitHub-hosted `ubuntu-latest`. There is no self-hosted runner pool.
 - All declared workflows use dedicated repository configuration; none use
   `jooservices/workflows`.
 - Secret scanning has two layers: GitHub Secret Scanning and Push Protection
