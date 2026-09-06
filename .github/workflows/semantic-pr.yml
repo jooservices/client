@@ -5,6 +5,7 @@ on:
     types:
       - opened
       - edited
+      - synchronize
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -20,7 +21,7 @@ jobs:
     if: >
       github.actor != 'dependabot[bot]' &&
       !startsWith(github.head_ref, 'dependabot/') &&
-      (github.event.action == 'opened' || github.event.changes.title != null)
+      (github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.changes.title != null)
     steps:
       - name: Check PR title
         uses: amannn/action-semantic-pull-request@v6.1.1
