@@ -217,7 +217,7 @@ Workflows:
 
 Quality gates: Pint · PHPCS · PHPStan · PHPMD · PHP-CS-Fixer · 85% coverage floor.
 
-**CI secrets:** none required — the entire gate runs inside Docker via Composer scripts; no third-party upload steps (Codecov / Sonar) are wired.
+**CI secrets:** the quality gate runs inside Docker via Composer scripts. The pull-request workflow uploads coverage to Codecov and analysis to SonarQube for non-bot PRs; the post-merge workflow uploads them unconditionally. Both use `CODECOV_TOKEN`, `SONAR_TOKEN`, and optional `SONAR_HOST_URL`, which may be configured at repository or organization scope.
 
 ## Community
 
