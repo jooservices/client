@@ -26,7 +26,7 @@ flowchart TD
     push --> CodeQL
     push --> Audit
 
-    master[Push to master] --> Scorecard[OpenSSF Scorecard]
+    develop[Push to develop] --> Scorecard[OpenSSF Scorecard]
 
     tag[Push tag v*.*.*] --> Release[Release]
 
@@ -114,7 +114,7 @@ approves the release.
 | `semantic-pr.yml` | PR opened, edited, synchronized | Validate PR title type and require an uppercase first subject character. Skipped for Dependabot pull requests. |
 | `pr-labeler.yml` | PR opened, synchronized, reopened | Checkout → apply labels from `.github/labeler.yml` based on changed paths. |
 | `link-check.yml` | Monday 04:00 UTC; manual | Checkout → Lychee checks Markdown links, excluding `vendor`, Packagist, Codecov, and mail links. |
-| `scorecard.yml` | Push to `master`; Monday 00:00 UTC; manual | OpenSSF Scorecard → upload SARIF. |
+| `scorecard.yml` | Push to `develop`; Monday 00:00 UTC; manual | OpenSSF Scorecard → upload SARIF. |
 | `stale.yml` | Daily 01:00 UTC; manual | Mark issues/PRs stale after 60 inactive days; close 14 days later, except pinned/security/dependencies. |
 | `workflow-audit.yml` | `.github/**` changes on push/PR; Monday 03:00 UTC; manual | Independent jobs: Actionlint checks workflow syntax and Zizmor scans workflow security, then uploads Zizmor SARIF when produced. |
 
