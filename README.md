@@ -1,11 +1,13 @@
 # jooservices/client
 
 [![CI](https://github.com/jooservices/client/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/jooservices/client/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/jooservices/client/graph/badge.svg?token=LUIWX086RP)](https://codecov.io/gh/jooservices/client)
-[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=jooservices_client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jooservices_client)
+[![Coverage (develop)](https://codecov.io/gh/jooservices/client/branch/develop/graph/badge.svg?token=LUIWX086RP)](https://codecov.io/gh/jooservices/client/branch/develop)
+[![Quality Gate (master)](https://sonarcloud.io/api/project_badges/measure?project=jooservices_client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jooservices_client)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jooservices/client/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jooservices/client)
 [![PHP Version](https://img.shields.io/badge/PHP-8.5%2B-blue.svg)](https://www.php.net/)
-[![Release](https://img.shields.io/badge/version-4.2.0-blue.svg)](CHANGELOG.md)
+[![GitHub Release](https://img.shields.io/github/v/release/jooservices/client?display_name=tag)](https://github.com/jooservices/client/releases)
+[![Packagist Version](https://img.shields.io/packagist/v/jooservices/client)](https://packagist.org/packages/jooservices/client)
+[![Total Downloads](https://img.shields.io/packagist/dt/jooservices/client)](https://packagist.org/packages/jooservices/client)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries included: fluent request building, a ranked middleware pipeline, resilience (retry, circuit breaker, rate limit, bulkhead, fallback, deadline), hardened security defaults, response-to-DTO mapping via `jooservices/dto`, and deterministic test fakes.
@@ -13,74 +15,26 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 > [!WARNING]
 > **`v4.0.0` is a complete ground-up rebuild around PSR-7 / PSR-17 / PSR-18 and is NOT backward compatible with any previous version.**
 > Client verb methods and Guzzle option bags are gone; there are no legacy shims, no deprecation bridges, and no compatibility code.
-> Upgrading means rewriting call sites against the new API — see [About v4.0.0](#about-v400), [`UPGRADE-4.0.md`](UPGRADE-4.0.md), and the [changelog](CHANGELOG.md).
+> Upgrading means rewriting call sites against the new API — see [`UPGRADE-4.0.md`](UPGRADE-4.0.md) and the [changelog](CHANGELOG.md).
 
-## About v4.0.0
+## Upgrade highlights
 
-| | |
-| --- | --- |
-| Status | **`v4.2.0` — current release** |
-| First public line | `v4.0.0` — earlier releases belong to the retired implementation ([changelog](CHANGELOG.md) starts here) |
-| Compatibility | **None with older versions.** Client verbs (`$client->get()`, `post()`, …) and Guzzle-style option bags are removed |
-| Core contract | PSR-18 `sendRequest(RequestInterface)` — HTTP 4xx/5xx responses are returned, never thrown |
-| Per-request options | Portable `RequestOptions` DTO accepted by `send($request, $options)` — timeout, connect timeout, proxy, TLS verification, redirects |
-| Exceptions | HTTP-status exceptions are opt-in via `Response::from($response)->throw()` |
-| Response mapping | `jooservices/dto ^3.0` integration through `Response::toDto()` / `collect()` |
-
-## Highlights vs the previous line
-
-| Area | Previous | This rebuild (`v4.0.0`) |
-| --- | --- | --- |
-| Core interface | Client verb methods | Strict PSR-18 `HttpClient`: `sendRequest()` + `send($request, $options)` |
-| Request options | Guzzle option bags | Portable `RequestOptions` DTO validated at the boundary |
-| Requests | Ad hoc construction | Fluent immutable `RequestBuilder` → `PreparedRequest` (`toPsr()`, `options()`) |
-| Responses | Direct PSR-7 handling | `Response` wrapper: status helpers, cached JSON, download-size ceiling, opt-in `throw()`, DTO mapping |
-| Middleware | — | 22 ranked middleware with canonical ordering, presets, and `insertMiddlewareBefore()` / `insertMiddlewareAfter()` |
-| Resilience | — | Retry, circuit breaker, rate limit, bulkhead, fallback, deadline — pluggable in-memory / PSR-16 stores |
-| Security | — | TLS-on-by-default, CR/LF rejection, credential stripping on redirects, private-IP redirect policy, log sanitizer |
-| Testing | — | Deterministic fakes: `ClientBuilder::fake()`, `HttpFakeRegistry`, `TestResponseSequence`, `assertSent()` |
+- v4 is a strict PSR-18 `HttpClient` — `sendRequest()` plus `send($request, $options)`; verb methods are removed.
+- Guzzle option bags are replaced by a portable, validated `RequestOptions` DTO.
+- Fluent immutable `RequestBuilder` produces a `PreparedRequest` (PSR-7 form plus options).
+- `Response` wrapper adds status helpers, cached JSON, download-size ceiling, opt-in `throw()`, and DTO mapping.
+- Deterministic test fakes replace live-network dependencies.
 
 ## Features
 
-**Core**
-
-- PSR-18 `HttpClient` built through the immutable `ClientBuilder`; base URI is treated as a directory prefix (trailing slash added) and protocol-relative URIs are rejected
-- Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` / `withMultipart()` (auto `Content-Type`)
-- `Response::from()`: status helpers, header access, BOM-stripping cached JSON, 100 MB body ceiling, `throw()`, `toPsrResponse()` escape hatch
-- Per-request portable options layered over builder defaults
-
-**Middleware pipeline**
-
-- Observability: logging (sanitized), metrics, correlation ID, trace context, progress
-- Resilience: retry, circuit breaker, rate limit, bulkhead, fallback, deadline, request coalescing
-- Auth/security: authentication, OAuth token refresh, HMAC request signing, idempotency keys, WAN-IP awareness
-- DX: user agent (fixed / generated / rotating), API version, cache, response validation, interceptors (`onRequest()` / `onResponse()` / `onError()`)
-- Canonical outermost-to-innermost ranking is applied on `build()` by default. `withStandardMiddlewareOrder()` and `withProductionMiddlewareOrder()` are explicit aliases of that same ranked list; custom middleware must be placed with `insertMiddlewareBefore()` / `insertMiddlewareAfter()` or `build()` rejects it as unranked
-
-**Resilience state**
-
-- Validated config DTOs: `RetryConfig`, `CircuitBreakerConfig`, `RateLimitConfig`, `BulkheadConfig`, `FallbackConfig`
-- In-memory stores by default; swap in PSR-16 adapters for persistent, multi-process resilience state
-- Dedicated exceptions: `CircuitOpenException`, `RateLimitExceededException`, `BulkheadRejectedException`
-
-**Transports**
-
-- `CurlTransport` (default) — native cURL with streaming response bodies
-- `PsrTransport` — wraps any PSR-18 client; `GuzzleTransport` via optional `guzzlehttp/guzzle`
-- `FailoverTransport` — ordered transport list with capability reporting
-
-**Security defaults**
-
-- TLS certificate verification enabled out of the box; CR/LF header injection rejected
-- Cross-origin redirects strip credential headers (including common API-key/token names)
-- Public-origin redirects to private/link-local IP targets rejected (explicit opt-in available)
-- Response download-size guard; sensitive data redacted from logs
-
-**Validation, auth, testing**
-
-- Opt-in JSON Schema response validation (`justinrainbow/json-schema`)
-- Bearer token, API key, basic auth; `HmacSha256Signer` for request signing
-- Deterministic testing: fake registry, scripted `TestResponseSequence`s, recorded-request assertions, `InteractsWithHttpClient` trait
+- PSR-18 `HttpClient` built through the immutable `ClientBuilder`; base URI treated as a directory prefix, protocol-relative URIs rejected.
+- Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` / `withMultipart()` (auto `Content-Type`).
+- `Response::from()`: status helpers, header access, BOM-stripping cached JSON, 100 MB body ceiling, `throw()`, `toPsrResponse()` escape hatch.
+- Ranked middleware pipeline with canonical ordering and presets: observability, resilience, auth/security, and DX.
+- Resilience: retry, circuit breaker, rate limit, bulkhead, fallback, deadline — in-memory stores by default, PSR-16 adapters supported.
+- Security defaults: TLS verification on, CR/LF injection rejected, credential stripping and private-IP policy on redirects, download-size guard, log sanitizer.
+- Transports: `CurlTransport` (default), `PsrTransport`, `GuzzleTransport` (optional), `FailoverTransport`.
+- Deterministic testing: fake registry, scripted `TestResponseSequence`s, recorded-request assertions, `InteractsWithHttpClient` trait.
 
 ## Requirements
 
@@ -139,7 +93,7 @@ ClientBuilder::assertSent(
 );
 ```
 
-## Design contract
+## Design notes
 
 - `sendRequest(RequestInterface)` is strict PSR-18: HTTP 4xx/5xx responses are returned, not thrown. Use `Response::from($response)->throw()` when status exceptions are wanted.
 - Each layer owns one concern:
@@ -155,69 +109,32 @@ ClientBuilder::assertSent(
 
 ## Documentation
 
-- [Changelog](CHANGELOG.md) — starts at `v4.0.0`
+- [Changelog](CHANGELOG.md) — version history and upgrade notes
 - [`UPGRADE-4.0.md`](UPGRADE-4.0.md) — migrating from pre-v4 APIs
-- [`WORKFLOWS.md`](WORKFLOWS.md) — CI and release workflow notes
+- [Development workflows](WORKFLOWS.md) — branches, CI, releases, and repository automation
+- [Security policy](SECURITY.md) — private vulnerability reporting
 
 ## Development
 
-All tooling runs inside Docker (`php:8.5-cli-bookworm` via Docker Compose); Composer downloads dependencies from Packagist.
+All PHP tooling runs inside Docker (`php:8.5-cli-bookworm` via Docker Compose); Composer downloads dependencies from Packagist.
 
 ```bash
 make build     # build the tooling image
 make install   # composer install in the container
+make shell     # interactive container shell
 ```
 
 | Command | Purpose |
 | --- | --- |
 | `make validate` | `composer validate --strict` |
 | `make lint` | Pint, PHPCS, PHPStan, PHPMD, PHP-CS-Fixer |
-| `make test` | PHPUnit (no coverage) |
+| `make test` | PHPUnit (Unit + Integration, no coverage) |
 | `make test-coverage` | PHPUnit with PCOV Clover coverage |
+| `make audit` | Composer audit |
 | `make bench` | phpbench |
-| `make ci` | lint + coverage run + coverage gate (local CI parity) |
+| `make ci` | lint + coverage run + 85% coverage gate (local CI parity) |
 
-Coverage is enforced at an **85% floor** by the reusable `tools/coverage-enforce.php`.
-
-Git hooks are opt-in so installing this library outside a Git checkout never fails: run `composer hooks:install` from a clone when you want commit-message, lint, and test hooks (Captainhook).
-
-## Branch model & CI
-
-- `master` — production; `develop` — integration
-- Feature/fix branches from `develop`, PR back into `develop`; releases via tags from `master`; hotfixes from `master`
-- PRs required, all CI checks green before merge
-
-Required CI flow (Docker-based quality gate):
-
-```text
-Pull-request gate (ci.yml):
-docker build → composer install → validate --strict
-  → lint ×5 (Pint, PHPCS, PHPStan, PHPMD, PHP-CS-Fixer)
-  → PHPUnit coverage (PCOV) → 85% Clover floor
-
-Post-merge sanity (ci-post-merge.yml):
-same gate on push heads
-```
-
-Workflows:
-
-| Workflow | Trigger | Purpose |
-| --- | --- | --- |
-| `ci.yml` | pull_request → `master` / `develop` | Full quality gate: validate, lint ×5, tests with coverage, 85% floor |
-| `ci-post-merge.yml` | push → `master` / `develop` | Same gate on merged heads |
-| `codeql.yml` | push/PR; weekly | CodeQL analysis |
-| `commitlint.yml` | pull_request | Conventional Commits on every PR commit |
-| `semantic-pr.yml` | pull_request | Conventional Commits PR title |
-| `pr-labeler.yml` | pull_request | Path labels |
-| `release.yml` | tag `v*.*.*` | Tag reachability from `master`, full quality gate, GitHub Release |
-| `scorecard.yml` | push to `master`; weekly | OpenSSF Scorecard |
-| `workflow-audit.yml` | `.github/**` changes; weekly | actionlint + zizmor on workflow files |
-| `link-check.yml` | weekly | Markdown link check |
-| `stale.yml` | daily | Stale issue/PR housekeeping |
-
-Quality gates: Pint · PHPCS · PHPStan · PHPMD · PHP-CS-Fixer · 85% coverage floor.
-
-**CI secrets:** the quality gate runs inside Docker via Composer scripts. The pull-request workflow uploads coverage to Codecov and analysis to SonarQube for non-bot PRs; the post-merge workflow uploads them unconditionally. Both use `CODECOV_TOKEN`, `SONAR_TOKEN`, and optional `SONAR_HOST_URL`, which may be configured at repository or organization scope.
+Coverage is enforced at an **85% floor** by `tools/coverage-enforce.php`. Git hooks are opt-in: run `composer hooks:install` from a clone when you want commit-message, lint, and test hooks (Captainhook).
 
 ## Community
 
