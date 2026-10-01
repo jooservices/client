@@ -18,12 +18,14 @@ jobs:
   validate:
     name: Validate PR Title
     runs-on: ubuntu-latest
-    if: >
-      github.actor != 'dependabot[bot]' &&
-      !startsWith(github.head_ref, 'dependabot/') &&
-      (github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.changes.title != null)
     steps:
+      - name: Allow Dependabot PR title
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        run: echo "Dependabot PR titles use Dependabot's generated convention."
       - name: Check PR title
+        if: >
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          (github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.changes.title != null)
         uses: amannn/action-semantic-pull-request@v6.1.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
