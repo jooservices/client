@@ -5,7 +5,7 @@ export default {
     ignores: [
         (message) =>
             process.env.DEPENDABOT_PR === 'true' &&
-            /^chore\((?:deps|deps-dev)\): (?:bump\s+|lockfile maintenance)/u.test(message),
+            /^(?:chore\((?:deps|deps-dev)\)|ci\(deps\)): (?:[Bb]ump\s+|lockfile maintenance)/u.test(message),
     ],
     rules: {
         'header-max-length': [2, 'always', 120],
