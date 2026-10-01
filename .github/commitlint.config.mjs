@@ -1,8 +1,12 @@
 /** @type {import('@commitlint/types').UserConfig} */
 export default {
     defaultIgnores: true,
-    // Registered exception: allow Dependabot bump / lockfile maintenance commits.
-    ignores: [(message) => /^chore\((?:deps|deps-dev)\): (?:bump\s+|lockfile maintenance)/u.test(message)],
+    // CI sets this only from the trusted pull request author context.
+    ignores: [
+        (message) =>
+            process.env.DEPENDABOT_PR === 'true' &&
+            /^chore\((?:deps|deps-dev)\): (?:bump\s+|lockfile maintenance)/u.test(message),
+    ],
     rules: {
         'header-max-length': [2, 'always', 120],
         'header-min-length': [2, 'always', 10],

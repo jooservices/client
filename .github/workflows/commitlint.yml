@@ -17,6 +17,8 @@ jobs:
     name: Validate commit messages
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      DEPENDABOT_PR: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
