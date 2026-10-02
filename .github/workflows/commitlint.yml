@@ -26,6 +26,30 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Reject mixed-authorship Dependabot PR
+        if: env.DEPENDABOT_PR == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const invalidCommits = commits.filter(
+              ({ author }) => author?.login !== 'dependabot[bot]',
+            );
+
+            if (invalidCommits.length > 0) {
+              const details = invalidCommits
+                .map(({ sha, author }) => `${sha.slice(0, 7)} (${author?.login ?? 'unknown'})`)
+                .join(', ');
+              core.setFailed(
+                `Dependabot PRs must contain only Dependabot-authored commits: ${details}`,
+              );
+            }
+
       - name: Validate PR commits
         uses: wagoid/commitlint-github-action@v6
         with:
