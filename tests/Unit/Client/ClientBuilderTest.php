@@ -67,6 +67,22 @@ final class ClientBuilderTest extends TestCase
     }
 
     #[Test]
+    public function testWithCompressionIsImmutableAndRecordsTheBuilderDefault(): void
+    {
+        $transport = (new FakeTransport())->push(new \Nyholm\Psr7\Response())->push(new \Nyholm\Psr7\Response());
+        $builder = ClientBuilder::create()->withTransport($transport);
+        $compressed = $builder->withCompression();
+        $request = $builder->build()->requestBuilder()->get('https://example.test')->toPsr();
+
+        $builder->build()->sendRequest($request);
+        $compressed->build()->sendRequest($request);
+
+        self::assertNotSame($builder, $compressed);
+        self::assertFalse($transport->recorded()[0]['options']->compression);
+        self::assertTrue($transport->recorded()[1]['options']->compression);
+    }
+
+    #[Test]
     public function testPreservesMultipleSetCookieHeaderValues(): void
     {
         $transport = (new FakeTransport())->push(new \Nyholm\Psr7\Response());

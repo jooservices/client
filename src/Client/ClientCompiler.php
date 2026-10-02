@@ -32,6 +32,7 @@ final class ClientCompiler
             $connection->verifySsl,
             $connection->allowRedirects,
             $connection->proxy,
+            $connection->compression,
         );
 
         return new HttpClient(
@@ -50,6 +51,7 @@ final class ClientCompiler
             $supported = match ($property) {
                 'timeout' => $capabilities->timeout,
                 'connectTimeout' => $capabilities->connectTimeout,
+                'compression' => $capabilities->compression,
                 'proxy' => $capabilities->proxy,
                 'verifySsl' => $capabilities->verifySsl,
                 'allowRedirects' => $capabilities->allowRedirects,

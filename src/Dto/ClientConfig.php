@@ -22,6 +22,7 @@ final class ClientConfig extends Dto
         public readonly bool $verifySsl = true,
         public readonly bool|array $allowRedirects = true,
         public readonly string|array|null $proxy = null,
+        public readonly bool $compression = false,
     ) {
         if ($timeout <= 0.0) {
             throw new InvalidConfigurationException('ClientConfig timeout must be greater than zero.');

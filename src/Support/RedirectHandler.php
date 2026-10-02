@@ -100,12 +100,13 @@ final class RedirectHandler
     private function withoutFollowing(RequestOptions $options): RequestOptions
     {
         return new RequestOptions(
-            $options->timeout,
-            $options->connectTimeout,
-            $options->proxy,
-            $options->verifySsl,
-            false,
-            $options->extra,
+            timeout: $options->timeout,
+            connectTimeout: $options->connectTimeout,
+            proxy: $options->proxy,
+            verifySsl: $options->verifySsl,
+            allowRedirects: false,
+            extra: $options->extra,
+            compression: $options->compression,
         );
     }
 

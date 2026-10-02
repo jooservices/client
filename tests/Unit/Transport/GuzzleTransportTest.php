@@ -62,6 +62,73 @@ final class GuzzleTransportTest extends TestCase
         self::assertIsArray($client->options);
         self::assertFalse($client->options['http_errors']);
         self::assertFalse($client->options['allow_redirects']);
+        self::assertArrayNotHasKey('decode_content', $client->options);
+    }
+
+    #[Test]
+    public function testReportsCompressionCapability(): void
+    {
+        $factory = new Psr17Factory();
+        $client = new \stdClass();
+
+        self::assertTrue(
+            (new GuzzleTransport($client, $factory, $factory))->capabilities()->compression,
+        );
+    }
+
+    #[Test]
+    public function testEnablesCompressionAndPreservesCallerAcceptEncoding(): void
+    {
+        $factory = new Psr17Factory();
+        $client = new class {
+            /** @var array<string, mixed>|null */
+            public ?array $options = null;
+
+            public ?RequestInterface $request = null;
+
+            /** @param array<string, mixed> $options */
+            public function send(RequestInterface $request, array $options = []): ResponseInterface
+            {
+                $this->request = $request;
+                $this->options = $options;
+
+                return new PsrResponse(200);
+            }
+        };
+        $transport = new GuzzleTransport($client, $factory, $factory);
+        $request = $factory->createRequest('GET', 'https://abc.com')->withHeader('Accept-Encoding', 'identity');
+
+        $transport->handle($request, new RequestOptions(compression: true));
+
+        self::assertIsArray($client->options);
+        self::assertTrue($client->options['decode_content']);
+        self::assertSame('identity', $client->request?->getHeaderLine('Accept-Encoding'));
+    }
+
+    #[Test]
+    public function testAddsSupportedAcceptEncodingWhenCallerDidNotProvideOne(): void
+    {
+        $factory = new Psr17Factory();
+        $client = new class {
+            public ?RequestInterface $request = null;
+
+            /** @param array<string, mixed> $options */
+            public function send(RequestInterface $request, array $options = []): ResponseInterface
+            {
+                $this->request = $request;
+
+                return new PsrResponse(200);
+            }
+        };
+        $transport = new GuzzleTransport($client, $factory, $factory);
+
+        $transport->handle(
+            $factory->createRequest('GET', 'https://abc.com'),
+            new RequestOptions(compression: true),
+        );
+
+        $acceptEncoding = $client->request?->getHeaderLine('Accept-Encoding');
+        self::assertContains($acceptEncoding, ['gzip, deflate', 'gzip, deflate, br']);
     }
 
     #[Test]

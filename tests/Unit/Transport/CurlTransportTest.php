@@ -33,6 +33,7 @@ final class CurlTransportTest extends TestCase
         $caps = new CurlTransport($factory, $factory, $factory)->capabilities();
         self::assertTrue($caps->timeout);
         self::assertTrue($caps->connectTimeout);
+        self::assertTrue($caps->compression);
         self::assertTrue($caps->proxy);
         self::assertTrue($caps->verifySsl);
         self::assertTrue($caps->allowRedirects);

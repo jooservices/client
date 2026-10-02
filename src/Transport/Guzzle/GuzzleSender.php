@@ -22,6 +22,10 @@ final class GuzzleSender
 
     public function send(RequestInterface $request, RequestOptions $options): ResponseInterface
     {
+        if ($options->compression === true && ! $request->hasHeader('Accept-Encoding')) {
+            $request = $request->withHeader('Accept-Encoding', $this->acceptEncoding());
+        }
+
         $sender = [$this->client, 'send'];
         if (! is_callable($sender)) {
             throw new InvalidConfigurationException('GuzzleTransport requires an object with send().');
@@ -35,6 +39,7 @@ final class GuzzleSender
                 'verify' => $options->verifySsl,
                 'allow_redirects' => false,
                 'http_errors' => false,
+                'decode_content' => $options->compression,
             ], static fn(mixed $value): bool => $value !== null));
         } catch (NetworkExceptionInterface $error) {
             // Normalize into this library's own exception types: FailoverTransport's catch clauses
@@ -51,6 +56,29 @@ final class GuzzleSender
             throw new InvalidConfigurationException('GuzzleTransport send() must return a PSR-7 response.');
         }
 
-        return $response;
+        if ($options->compression !== true) {
+            return $response;
+        }
+
+        return $response
+            ->withoutHeader('Content-Encoding')
+            ->withoutHeader('Content-Length')
+            ->withoutHeader('Transfer-Encoding');
+    }
+
+    private function acceptEncoding(): string
+    {
+        $version = curl_version();
+        $features = $version['features'] ?? 0;
+        $brotliFlag = defined('CURL_VERSION_BROTLI') ? constant('CURL_VERSION_BROTLI') : null;
+        if (
+            ! is_int($features)
+            || ! is_int($brotliFlag)
+            || ($features & $brotliFlag) === 0
+        ) {
+            return 'gzip, deflate';
+        }
+
+        return 'gzip, deflate, br';
     }
 }

@@ -68,7 +68,9 @@ final class ArchitectureTest extends TestCase
         self::assertNull($options->timeout);
         self::assertNull($options->verifySsl);
         self::assertNull($options->allowRedirects);
+        self::assertNull($options->compression);
         self::assertSame(30.0, new ClientConfig()->timeout);
+        self::assertFalse(new ClientConfig()->compression);
         self::assertTrue(new ClientConfig()->verifySsl);
     }
 

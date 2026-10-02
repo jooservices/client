@@ -65,6 +65,7 @@ final class CurlExchange
 
         $this->applyMethodAndBody($curlOptions, $request, $payload);
         $this->applyTimeouts($curlOptions, $options, $proxy);
+        $this->applyCompression($curlOptions, $request, $options);
 
         curl_setopt_array($handle, $curlOptions);
         $completed = curl_exec($handle);
@@ -83,7 +84,7 @@ final class CurlExchange
             $response = $response->withHeader($name, $values);
         }
 
-        return $response;
+        return $this->normalizeDecodedResponse($response, $options->compression === true);
     }
 
     public function close(): void
@@ -187,6 +188,30 @@ final class CurlExchange
         if ($proxy !== null) {
             $curlOptions[CURLOPT_PROXY] = $proxy;
         }
+    }
+
+    /** @param array<int, mixed> $curlOptions */
+    private function applyCompression(array &$curlOptions, RequestInterface $request, RequestOptions $options): void
+    {
+        if ($options->compression !== true) {
+            return;
+        }
+
+        // An empty value makes libcurl advertise every built-in encoding. When the caller supplied a
+        // header, pass its value to libcurl as the decoder configuration while preserving that header.
+        $curlOptions[CURLOPT_ACCEPT_ENCODING] = $request->getHeaderLine('Accept-Encoding');
+    }
+
+    private function normalizeDecodedResponse(ResponseInterface $response, bool $decoded): ResponseInterface
+    {
+        if (! $decoded) {
+            return $response;
+        }
+
+        return $response
+            ->withoutHeader('Content-Encoding')
+            ->withoutHeader('Content-Length')
+            ->withoutHeader('Transfer-Encoding');
     }
 
     private function fail(RequestInterface $request, int $number, string $message, bool $sizeCapExceeded): never
