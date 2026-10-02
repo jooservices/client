@@ -34,6 +34,7 @@ final class GuzzleTransport implements TransportInterface
         return new TransportCapabilities([
             'timeout' => true,
             'connectTimeout' => true,
+            'compression' => true,
             'proxy' => true,
             'verifySsl' => true,
             'allowRedirects' => true,

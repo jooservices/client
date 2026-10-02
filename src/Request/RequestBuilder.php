@@ -269,12 +269,13 @@ final class RequestBuilder
         $current = $this->options;
         $copy = clone $this;
         $copy->options = new RequestOptions(
-            $timeout ?? $current->timeout,
-            $connectTimeout ?? $current->connectTimeout,
-            $proxy ?? $current->proxy,
-            $verifySsl ?? $current->verifySsl,
-            $allowRedirects ?? $current->allowRedirects,
-            $current->extra,
+            timeout: $timeout ?? $current->timeout,
+            connectTimeout: $connectTimeout ?? $current->connectTimeout,
+            proxy: $proxy ?? $current->proxy,
+            verifySsl: $verifySsl ?? $current->verifySsl,
+            allowRedirects: $allowRedirects ?? $current->allowRedirects,
+            extra: $current->extra,
+            compression: $current->compression,
         );
         return $copy;
     }

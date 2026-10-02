@@ -19,6 +19,7 @@ final readonly class ClientConnection
         public bool $verifySsl,
         public bool|array $allowRedirects,
         public string|array|null $proxy,
+        public bool $compression,
     ) {
     }
 }

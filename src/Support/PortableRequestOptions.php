@@ -8,6 +8,7 @@ final class PortableRequestOptions
 {
     public const TIMEOUT = 'timeout';
     public const CONNECT_TIMEOUT = 'connectTimeout';
+    public const COMPRESSION = 'compression';
     public const PROXY = 'proxy';
     public const VERIFY_SSL = 'verifySsl';
     public const ALLOW_REDIRECTS = 'allowRedirects';
