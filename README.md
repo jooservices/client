@@ -93,6 +93,18 @@ ClientBuilder::assertSent(
 );
 ```
 
+## Compression
+
+Response compression is disabled by default. Enable it on the immutable builder to advertise supported encodings and receive decoded response bodies:
+
+```php
+$client = ClientBuilder::create()
+    ->withCompression()
+    ->build();
+```
+
+Use the `compression` request option to override the builder default for one request. Caller-provided `Accept-Encoding` headers are preserved; decoded responses no longer expose `Content-Encoding` or encoded-body length headers.
+
 ## Design notes
 
 - `sendRequest(RequestInterface)` is strict PSR-18: HTTP 4xx/5xx responses are returned, not thrown. Use `Response::from($response)->throw()` when status exceptions are wanted.
