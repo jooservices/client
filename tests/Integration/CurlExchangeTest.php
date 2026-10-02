@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JOOservices\Client\Tests\Integration;
 
+use Faker\Factory;
+use JOOservices\Client\Client\ClientBuilder;
 use JOOservices\Client\Dto\RequestOptions;
 use JOOservices\Client\Exceptions\DownloadSizeExceededException;
 use JOOservices\Client\Request\RequestBuilder;
@@ -92,6 +94,96 @@ final class CurlExchangeTest extends TestCase
             self::assertSame('a.bin', $file['name'] ?? null);
             self::assertSame("hello\0world", $file['contents'] ?? null);
             fclose($handle);
+        } finally {
+            $this->stopServer();
+        }
+    }
+
+    #[Test]
+    public function testDecodesGzipResponseWhenCompressionIsEnabled(): void
+    {
+        $port = $this->startServer();
+
+        try {
+            $factory = new Psr17Factory();
+            $body = Factory::create()->sentence(8);
+            $request = $factory->createRequest(
+                'GET',
+                'http://127.0.0.1:' . $port . '/gzip-body.php?' . http_build_query(
+                    ['value' => $body],
+                    '',
+                    '&',
+                    PHP_QUERY_RFC3986,
+                ),
+            );
+            $response = (new CurlExchange($factory, $factory))->send(
+                $request,
+                new RequestOptions(timeout: 2, connectTimeout: 2, compression: true),
+            );
+
+            self::assertSame($body, (string) $response->getBody());
+            self::assertFalse($response->hasHeader('Content-Encoding'));
+            self::assertFalse($response->hasHeader('Content-Length'));
+            self::assertFalse($response->hasHeader('Transfer-Encoding'));
+        } finally {
+            $this->stopServer();
+        }
+    }
+
+    #[Test]
+    public function testDisabledCompressionDoesNotAddAnAcceptEncodingHeader(): void
+    {
+        $port = $this->startServer();
+
+        try {
+            $client = ClientBuilder::create()
+                ->withBaseUri('http://127.0.0.1:' . $port)
+                ->withCompression(false)
+                ->build();
+            $withoutHeader = $client->requestBuilder()->get('request-headers.php')->toPsr();
+            $withHeader = $client->requestBuilder()
+                ->get('request-headers.php')
+                ->withHeader('Accept-Encoding', 'identity')
+                ->toPsr();
+
+            $withoutHeaderResponse = $client->sendRequest($withoutHeader);
+            $withHeaderResponse = $client->sendRequest($withHeader);
+
+            self::assertSame('<none>', $withoutHeaderResponse->getHeaderLine('X-Received-Accept-Encoding'));
+            self::assertSame('identity', $withHeaderResponse->getHeaderLine('X-Received-Accept-Encoding'));
+        } finally {
+            $this->stopServer();
+        }
+    }
+
+    #[Test]
+    public function testDecodedResponseRemainsReadableThroughCacheMiddleware(): void
+    {
+        $port = $this->startServer();
+
+        try {
+            $factory = new Psr17Factory();
+            $body = Factory::create()->sentence(8);
+            $client = ClientBuilder::create()
+                ->withBaseUri('http://127.0.0.1:' . $port)
+                ->withCompression()
+                ->withCache()
+                ->build();
+            $request = $client->requestBuilder()->get('gzip-body.php?' . http_build_query(
+                ['value' => $body],
+                '',
+                '&',
+                PHP_QUERY_RFC3986,
+            ))->toPsr();
+
+            $first = $client->sendRequest($request);
+            $second = $client->sendRequest($request);
+
+            self::assertSame($body, (string) $first->getBody());
+            self::assertSame($body, (string) $second->getBody());
+            self::assertFalse($second->hasHeader('Content-Encoding'));
+            self::assertFalse($second->hasHeader('Content-Length'));
+            self::assertSame('Accept-Encoding', $second->getHeaderLine('Vary'));
         } finally {
             $this->stopServer();
         }
