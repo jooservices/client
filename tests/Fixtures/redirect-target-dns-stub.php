@@ -11,7 +11,7 @@ namespace JOOservices\Client\Support;
 function dns_get_record(string $hostname, int $type = DNS_A): array|false
 {
     return match ($hostname) {
-        'abc.com', 'example.com' => [['host' => $hostname, 'type' => 'A', 'ip' => '93.184.216.34']],
+        'abc.com', 'example.com', 'attacker.co.uk', 'victim.co.uk' => [['host' => $hostname, 'type' => 'A', 'ip' => '93.184.216.34']],
         default => [],
     };
 }
