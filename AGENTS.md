@@ -7,6 +7,7 @@ This file adds project-only rules.
 - All PHP tooling via Docker (`php:8.5-cli-bookworm`)
 - CI on GitHub-hosted `ubuntu-latest` runners via `tools/ci/docker-compose`
 - Lints at **max** with **no ignore**: Pint `per`, PHPCS, PHPStan max + strict rules, PHPMD, PHP-CS-Fixer
-- Coverage floor **85%** (`tools/coverage-enforce.php`); Unit + Integration suites
+- Coverage floor **85%** on the Unit suite (`tools/coverage-enforce.php`); Arch, Integration, and E2E also run
+- `composer ci` / `make ci` includes `composer validate --strict` and `composer audit`
 - HTTP 4xx/5xx from `sendRequest()` are returned, never thrown — use `Response::throw()` when needed
 - Branch model: `develop` for integration, `master` for production, tags from `master`

@@ -33,7 +33,7 @@
                 "conditions": []
             },
             {
-                "action": "echo 'Running tests...' && composer test",
+                "action": "echo 'Running validate, audit, and tests...' && composer validate --strict && composer audit && composer test",
                 "conditions": []
             }
         ]

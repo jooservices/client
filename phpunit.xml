@@ -8,6 +8,7 @@
         <testsuite name="Arch"><directory>tests/Arch</directory></testsuite>
         <testsuite name="Unit"><directory>tests/Unit</directory></testsuite>
         <testsuite name="Integration"><directory>tests/Integration</directory></testsuite>
+        <testsuite name="E2E"><directory>tests/E2E</directory></testsuite>
     </testsuites>
     <source><include><directory suffix=".php">src</directory></include></source>
     <php><ini name="error_reporting" value="-1"/><ini name="memory_limit" value="512M"/></php>
