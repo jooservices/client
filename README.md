@@ -105,6 +105,27 @@ $client = ClientBuilder::create()
 
 Use the `compression` request option to override the builder default for one request. Caller-provided `Accept-Encoding` headers are preserved; decoded responses no longer expose `Content-Encoding` or encoded-body length headers.
 
+## Redirects
+
+Redirects are followed by default (up to 5 hops) and re-checked per hop for credential stripping and the public/private target policy. Pass an array to `withRedirects()` (or the `allowRedirects` request option) to tune the chain:
+
+```php
+$client = ClientBuilder::create()
+    ->withRedirects([
+        'max' => 5,              // hop limit
+        'allow_private' => false, // allow redirects to private/link-local hosts
+        'total_timeout' => 10.0,  // one budget shared by every hop
+        'track_redirects' => true, // expose X-Joo-Effective-Uri / X-Joo-Redirect-History
+        'cookies' => true,        // replay cookies a server set on an earlier hop
+    ])
+    ->build();
+```
+
+- Same-host redirects skip the DNS-based target policy, so a relative redirect never fails closed on a transient lookup or an `/etc/hosts`-only host.
+- Sensitive headers (including `Cookie`) are stripped only when the host changes or the scheme downgrades to `http` — not on a port change or an `http` → `https` upgrade.
+- The cookie jar is scoped to the redirect chain: a cookie set on one hop is replayed to a later hop only when its domain, path, and `Secure` flag match. It is never persisted across separate requests.
+- `withDeadline($seconds)` also bounds the whole redirect chain, not just each individual hop.
+
 ## Design notes
 
 - `sendRequest(RequestInterface)` is strict PSR-18: HTTP 4xx/5xx responses are returned, not thrown. Use `Response::from($response)->throw()` when status exceptions are wanted.
