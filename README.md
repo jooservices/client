@@ -140,11 +140,11 @@ make shell     # interactive container shell
 | --- | --- |
 | `make validate` | `composer validate --strict` |
 | `make lint` | Pint, PHPCS, PHPStan, PHPMD, PHP-CS-Fixer |
-| `make test` | PHPUnit (Unit + Integration, no coverage) |
+| `make test` | PHPUnit (Arch, Unit, Integration, E2E; no coverage) |
 | `make test-coverage` | PHPUnit with PCOV Clover coverage |
 | `make audit` | Composer audit |
 | `make bench` | phpbench |
-| `make ci` | lint + coverage run + 85% coverage gate (local CI parity) |
+| `make ci` | validate, audit, lint, coverage run, 85% Unit floor |
 
 Coverage is enforced at an **85% floor** by `tools/coverage-enforce.php`. Git hooks are opt-in: run `composer hooks:install` from a clone when you want commit-message, lint, and test hooks (Captainhook).
 

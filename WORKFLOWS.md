@@ -53,7 +53,7 @@ flowchart TD
     PR[Pull request] --> V[Validate]
     V --> L[Lint matrix x5 — fail-fast]
     L --> S[Security matrix x3 — fail-fast]
-    L --> T[Test matrix x2 — fail-fast]
+    L --> T[Test matrix x4 — fail-fast]
     S --> C[Coverage upload]
     T --> C
 
@@ -63,6 +63,8 @@ flowchart TD
     S --- S3[SAST: Semgrep OSS]
     T --- T1[Unit suite + coverage artifact]
     T --- T2[Integration suite + coverage artifact]
+    T --- T3[Arch suite + coverage artifact]
+    T --- T4[E2E suite + coverage artifact]
     C --- C1[Enforce 85% floor on Unit, merge Clover reports]
     C --- C2[Upload to Codecov and SonarQube]
 ```
@@ -77,7 +79,7 @@ the matrix name; `fail-fast` cancels pending legs once one leg fails.
 **Trigger:** pushes to `master` or `develop` (i.e., right after a merge).
 
 ```text
-Validate → Test matrix ×2 (fail-fast) → Coverage upload → Codecov + Sonar
+Validate → Test matrix ×4 (fail-fast) → Coverage upload → Codecov + Sonar
 ```
 
 A light sanity pass only: linting and security scanning already gated the
@@ -141,7 +143,7 @@ Both `master` and `develop` require pull requests with these status checks:
 `Validate`, the five `Lint (…)` legs, the three `Security (…)` legs,
 `Test (Unit)`, `Test (Integration)`, `Coverage upload`,
 `Analyze GitHub Actions`, `Validate commit messages`, and
-`Validate PR Title`. Strict mode requires the branch to be up to date.
+`Validate PR Title`. `Test (Arch)` and `Test (E2E)` are extra matrix legs. `Coverage upload` waits for every leg, so they already block a merge. Add those two names to the ruleset only after a green PR shows them. Strict mode requires the branch to be up to date.
 Force pushes and deletions are denied. Admins cannot bypass protection on
 either branch (`enforce_admins` is on).
 
