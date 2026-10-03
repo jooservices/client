@@ -50,6 +50,16 @@ final class CookieJarTest extends TestCase
     }
 
     #[Test]
+    public function testRejectsAPublicSuffixDomain(): void
+    {
+        $jar = new CookieJar();
+        $jar->storeFromResponse(new Uri('https://abc.com/login'), new Response(200, ['Set-Cookie' => 'sid=abc; Domain=com; Path=/']));
+
+        self::assertNull($jar->headerFor(new Uri('https://victim.com/home')));
+        self::assertNull($jar->headerFor(new Uri('https://abc.com/home')));
+    }
+
+    #[Test]
     public function testHonoursThePathAttribute(): void
     {
         $jar = new CookieJar();

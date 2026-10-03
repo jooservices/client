@@ -361,6 +361,28 @@ final class RedirectHandlerTest extends TestCase
     }
 
     #[Test]
+    public function testDoesNotReplayJarCookiesOnADowngradeToPlainHttp(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/login'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1
+                    ? new Response(302, ['Location' => 'http://abc.com/home', 'Set-Cookie' => 'sid=abc; Path=/'])
+                    : new Response(200);
+            },
+        );
+
+        self::assertSame('', $seen[1]->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
     public function testTracksTheEffectiveUriWhenRequested(): void
     {
         $factory = new Psr17Factory();

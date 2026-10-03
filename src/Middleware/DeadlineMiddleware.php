@@ -70,7 +70,9 @@ final class DeadlineMiddleware implements MiddlewareInterface
 
         $configured = is_array($allow) ? $allow : [];
         $existing = $configured['total_timeout'] ?? null;
-        $configured['total_timeout'] = is_numeric($existing)
+        // A non-positive configured budget means "no chain deadline" downstream, which would let the
+        // chain outlive this middleware's deadline; fall back to the deadline in that case.
+        $configured['total_timeout'] = is_numeric($existing) && (float) $existing > 0.0
             ? min((float) $existing, $this->seconds)
             : $this->seconds;
 

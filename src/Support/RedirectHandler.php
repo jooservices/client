@@ -137,7 +137,9 @@ final class RedirectHandler
             ? null
             : $this->targets->assertAllowed($current, $nextUri, $options);
         $next = $this->nextRequest($current, $nextUri, $response->getStatusCode(), $options);
-        if ($cookies !== null) {
+        // Never replay jar cookies on an https -> http downgrade: nextRequest() strips the explicit
+        // Cookie header for the same reason, and re-adding it here would defeat that protection.
+        if ($cookies !== null && ! $this->isSchemeDowngrade($current->getUri(), $nextUri)) {
             $next = $this->withCookies($next, $cookies);
         }
 
@@ -212,6 +214,11 @@ final class RedirectHandler
         return strcasecmp($current->getHost(), $next->getHost()) === 0;
     }
 
+    private function isSchemeDowngrade(UriInterface $current, UriInterface $next): bool
+    {
+        return strtolower($current->getScheme()) === 'https' && strtolower($next->getScheme()) === 'http';
+    }
+
     private function withCookies(RequestInterface $request, CookieJar $jar): RequestInterface
     {
         $jarHeader = $jar->headerFor($request->getUri());
@@ -263,7 +270,7 @@ final class RedirectHandler
         // Cookies are not port-scoped, and upgrading http -> https is safe; only a cross-host hop or a
         // downgrade to plain http may leak a credential, so those are the cases that strip.
         $authorityChanged = $hostChanged || $currentUri->getPort() !== $nextUri->getPort();
-        $downgraded = strtolower($currentUri->getScheme()) === 'https' && strtolower($nextUri->getScheme()) === 'http';
+        $downgraded = $this->isSchemeDowngrade($currentUri, $nextUri);
 
         $next = $current->withUri($nextUri, ! $authorityChanged);
 
