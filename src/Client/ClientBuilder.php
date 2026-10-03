@@ -71,6 +71,8 @@ final class ClientBuilder
 
     private float $connectTimeout = 10.0;
 
+    private bool $compression = false;
+
     /** @var array<string, string|list<string>> */
     private array $headers = [];
 
@@ -140,6 +142,15 @@ final class ClientBuilder
         $copy = clone $this;
         $copy->connectTimeout = $seconds;
         $copy->explicitCapabilities['connectTimeout'] = true;
+        return $copy;
+    }
+
+    public function withCompression(bool $enabled = true): self
+    {
+        $copy = clone $this;
+        $copy->compression = $enabled;
+        $copy->explicitCapabilities['compression'] = true;
+
         return $copy;
     }
     public function withVerifySsl(bool $verify): self
@@ -515,6 +526,7 @@ final class ClientBuilder
             $this->verifySsl,
             $this->allowRedirects,
             $this->proxy,
+            $this->compression,
         );
         $wiring = new ClientWiring(
             $this->explicitCapabilities,

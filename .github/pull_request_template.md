@@ -4,4 +4,4 @@
 ## Test plan
 - [ ] `make lint` (Docker)
 - [ ] `make test` (Docker)
-- [ ] CI green on self-hosted runner pool
+- [ ] CI green on GitHub-hosted `ubuntu-latest`

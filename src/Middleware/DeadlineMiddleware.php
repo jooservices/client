@@ -23,12 +23,13 @@ final class DeadlineMiddleware implements MiddlewareInterface
 
         try {
             $response = $handler->handle($request, new RequestOptions(
-                min($options->timeout ?? $this->seconds, $this->seconds),
-                $options->connectTimeout,
-                $options->proxy,
-                $options->verifySsl,
-                $options->allowRedirects,
-                $options->extra,
+                timeout: min($options->timeout ?? $this->seconds, $this->seconds),
+                connectTimeout: $options->connectTimeout,
+                proxy: $options->proxy,
+                verifySsl: $options->verifySsl,
+                allowRedirects: $options->allowRedirects,
+                extra: $options->extra,
+                compression: $options->compression,
             ));
         } catch (\Throwable $error) {
             // The per-attempt timeout above only bounds a single HTTP attempt; a retry/backoff sequence

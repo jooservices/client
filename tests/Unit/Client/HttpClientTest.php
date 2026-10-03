@@ -51,6 +51,32 @@ final class HttpClientTest extends TestCase
     }
 
     #[Test]
+    public function testPerRequestCompressionOverridesTheBuilderDefault(): void
+    {
+        $transport = (new FakeTransport())
+            ->push(new PsrResponse())
+            ->push(new PsrResponse());
+        $client = ClientBuilder::create()->withTransport($transport)->withCompression()->build();
+        $request = $client->requestBuilder()->get('https://api.example.test/users')->toPsr();
+
+        $client->send($request, ['compression' => false]);
+        $client->sendRequest($request);
+
+        self::assertFalse($transport->recorded()[0]['options']->compression);
+        self::assertTrue($transport->recorded()[1]['options']->compression);
+    }
+
+    #[Test]
+    public function testCompressionOptionRequiresABoolean(): void
+    {
+        $client = ClientBuilder::create()->withTransport(new FakeTransport())->build();
+        $request = $client->requestBuilder()->get('https://api.example.test/users')->toPsr();
+
+        $this->expectException(InvalidConfigurationException::class);
+        $client->send($request, ['compression' => 'yes']);
+    }
+
+    #[Test]
     public function testClientUsesBaseUriAndClientHeaders(): void
     {
         $transport = (new FakeTransport())->push(new PsrResponse());

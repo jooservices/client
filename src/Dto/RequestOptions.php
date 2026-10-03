@@ -12,6 +12,7 @@ final class RequestOptions extends Dto
      * @param string|array<string, mixed>|null $proxy
      * @param bool|array<string, mixed>|null $allowRedirects
      * @param array<string, mixed> $extra
+     * @param bool|null $compression
      */
     public function __construct(
         public readonly ?float $timeout = null,
@@ -20,6 +21,7 @@ final class RequestOptions extends Dto
         public readonly ?bool $verifySsl = null,
         public readonly bool|array|null $allowRedirects = null,
         public readonly array $extra = [],
+        public readonly ?bool $compression = null,
     ) {
     }
 }

@@ -1,4 +1,4 @@
-# Dedicated CI for jooservices/client — self-hosted runner1 (Linux X64)
+# Dedicated CI for jooservices/client — GitHub-hosted runners
 # Post-merge sanity run on master/develop heads. Full gate lives in ci.yml (pull requests).
 name: CI post-merge
 
@@ -17,7 +17,7 @@ permissions:
 jobs:
   validate:
     name: Validate
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -29,7 +29,7 @@ jobs:
         run: tools/ci/docker-compose build php
 
       - name: Cache Composer vendor
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: vendor-cache
         with:
           path: vendor
@@ -47,7 +47,7 @@ jobs:
   test:
     name: Test (${{ matrix.name }})
     needs: [validate]
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: true
@@ -57,6 +57,10 @@ jobs:
             suite: Unit
           - name: Integration
             suite: Integration
+          - name: Arch
+            suite: Arch
+          - name: E2E
+            suite: E2E
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -67,7 +71,7 @@ jobs:
         run: tools/ci/docker-compose build php
 
       - name: Cache Composer vendor
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: vendor-cache
         with:
           path: vendor
@@ -96,7 +100,7 @@ jobs:
   coverage:
     name: Coverage upload
     needs: [test]
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -117,10 +121,9 @@ jobs:
 
       - name: Enforce coverage and merge Clover reports
         run: |
-          # Only the Unit suite is enforced against the 85% floor: it's the suite responsible for
-          # exercising the codebase broadly. Integration is deliberately narrow (real curl I/O against
-          # a local server) and will never reach 85% of the whole src tree on its own — it's merged
-          # into the combined report below for Codecov/Sonar visibility, not gated here.
+          # Only the Unit suite is enforced against the 85% floor. Arch, Integration, and E2E
+          # also upload clover, but they are narrow and are not merged into the coverage gate.
+          # Integration is merged below for Codecov/Sonar visibility.
           tools/ci/docker-compose run --rm php php tools/coverage-enforce.php build/coverage/matrix/clover-Unit.xml
           tools/ci/docker-compose run --rm php php tools/coverage-merge.php \
             build/coverage/matrix/clover-Unit.xml \
@@ -155,7 +158,7 @@ jobs:
           echo "host_url=${host_url}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload SonarQube analysis
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ steps.sonar-config.outputs.host_url }}

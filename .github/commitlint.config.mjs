@@ -1,6 +1,12 @@
 /** @type {import('@commitlint/types').UserConfig} */
 export default {
     defaultIgnores: true,
+    // CI sets this only from the trusted pull request author context.
+    ignores: [
+        (message) =>
+            process.env.DEPENDABOT_PR === 'true' &&
+            /^(?:chore\((?:deps|deps-dev)\)|ci\(deps\)): (?:[Bb]ump\s+|lockfile maintenance)/u.test(message),
+    ],
     rules: {
         'header-max-length': [2, 'always', 120],
         'header-min-length': [2, 'always', 10],

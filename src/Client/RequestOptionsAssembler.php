@@ -13,29 +13,32 @@ final class RequestOptionsAssembler
     /** @param array<string, mixed> $options */
     public function fromArray(array $options): RequestOptions
     {
-        $known = ['timeout', 'connectTimeout', 'proxy', 'verifySsl', 'allowRedirects'];
+        $known = ['timeout', 'connectTimeout', 'proxy', 'verifySsl', 'allowRedirects', 'compression'];
         $extra = array_diff_key($options, array_flip($known));
         $timeout = $options['timeout'] ?? null;
         $connectTimeout = $options['connectTimeout'] ?? null;
         $proxy = $options['proxy'] ?? null;
         $verifySsl = $options['verifySsl'] ?? null;
         $allowRedirects = $options['allowRedirects'] ?? null;
-        $this->assertTypes($timeout, $connectTimeout, $proxy, $verifySsl, $allowRedirects);
+        $compression = $options['compression'] ?? null;
+        $this->assertTypes($timeout, $connectTimeout, $proxy, $verifySsl, $allowRedirects, $compression);
 
         /** @var string|array<string, mixed>|null $proxy */
         /** @var bool|null $verifySsl */
         /** @var bool|array<string, mixed>|null $allowRedirects */
+        /** @var bool|null $compression */
 
         $timeoutSeconds = is_numeric($timeout) ? (float) $timeout : null;
         $connectSeconds = is_numeric($connectTimeout) ? (float) $connectTimeout : null;
 
         return new RequestOptions(
-            $timeoutSeconds,
-            $connectSeconds,
-            $proxy,
-            $verifySsl,
-            $allowRedirects,
-            $extra,
+            timeout: $timeoutSeconds,
+            connectTimeout: $connectSeconds,
+            proxy: $proxy,
+            verifySsl: $verifySsl,
+            allowRedirects: $allowRedirects,
+            extra: $extra,
+            compression: $compression,
         );
     }
 
@@ -47,12 +50,13 @@ final class RequestOptionsAssembler
         $allowRedirects = $delta->allowRedirects ?? $config->allowRedirects;
 
         return new RequestOptions(
-            $delta->timeout ?? $config->timeout,
-            $delta->connectTimeout ?? $config->connectTimeout,
-            $proxy,
-            $delta->verifySsl ?? $config->verifySsl,
-            $allowRedirects,
-            $delta->extra,
+            timeout: $delta->timeout ?? $config->timeout,
+            connectTimeout: $delta->connectTimeout ?? $config->connectTimeout,
+            proxy: $proxy,
+            verifySsl: $delta->verifySsl ?? $config->verifySsl,
+            allowRedirects: $allowRedirects,
+            extra: $delta->extra,
+            compression: $delta->compression ?? $config->compression,
         );
     }
 
@@ -65,13 +69,14 @@ final class RequestOptionsAssembler
         }
     }
 
-    private function assertTypes(mixed $timeout, mixed $connectTimeout, mixed $proxy, mixed $verifySsl, mixed $allowRedirects): void
+    private function assertTypes(mixed $timeout, mixed $connectTimeout, mixed $proxy, mixed $verifySsl, mixed $allowRedirects, mixed $compression): void
     {
         $this->assertNumericOrNull($timeout);
         $this->assertNumericOrNull($connectTimeout);
         $this->assertProxy($proxy);
         $this->assertSsl($verifySsl);
         $this->assertRedirects($allowRedirects);
+        $this->assertCompression($compression);
     }
 
     private function assertNumericOrNull(mixed $value): void
@@ -98,6 +103,13 @@ final class RequestOptionsAssembler
     private function assertRedirects(mixed $allowRedirects): void
     {
         if ($allowRedirects !== null && ! is_bool($allowRedirects) && ! is_array($allowRedirects)) {
+            throw new InvalidConfigurationException('Request options have invalid types.');
+        }
+    }
+
+    private function assertCompression(mixed $compression): void
+    {
+        if ($compression !== null && ! is_bool($compression)) {
             throw new InvalidConfigurationException('Request options have invalid types.');
         }
     }

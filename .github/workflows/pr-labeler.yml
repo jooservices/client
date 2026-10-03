@@ -15,7 +15,7 @@ permissions:
 jobs:
   label:
     name: Auto-label PR
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

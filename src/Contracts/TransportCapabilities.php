@@ -13,6 +13,8 @@ final class TransportCapabilities
 
     public readonly bool $connectTimeout;
 
+    public readonly bool $compression;
+
     public readonly bool $proxy;
 
     public readonly bool $verifySsl;
@@ -24,6 +26,7 @@ final class TransportCapabilities
     {
         $this->timeout = $flags['timeout'] ?? false;
         $this->connectTimeout = $flags['connectTimeout'] ?? false;
+        $this->compression = $flags['compression'] ?? false;
         $this->proxy = $flags['proxy'] ?? false;
         $this->verifySsl = $flags['verifySsl'] ?? false;
         $this->allowRedirects = $flags['allowRedirects'] ?? false;
@@ -34,6 +37,7 @@ final class TransportCapabilities
         return new self([
             'timeout' => $this->timeout && $other->timeout,
             'connectTimeout' => $this->connectTimeout && $other->connectTimeout,
+            'compression' => $this->compression && $other->compression,
             'proxy' => $this->proxy && $other->proxy,
             'verifySsl' => $this->verifySsl && $other->verifySsl,
             'allowRedirects' => $this->allowRedirects && $other->allowRedirects,
@@ -45,6 +49,7 @@ final class TransportCapabilities
         $pairs = [
             'timeout' => [$options->timeout, $this->timeout],
             'connectTimeout' => [$options->connectTimeout, $this->connectTimeout],
+            'compression' => [$options->compression, $this->compression],
             'proxy' => [$options->proxy, $this->proxy],
             'verifySsl' => [$options->verifySsl, $this->verifySsl],
             'allowRedirects' => [$options->allowRedirects, $this->allowRedirects],
