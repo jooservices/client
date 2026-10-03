@@ -117,36 +117,53 @@ final class HttpClientE2ETest extends TestCase
 
     private function startServer(): int
     {
-        $port = random_int(20000, 40000);
-        $this->process = proc_open(
-            [PHP_BINARY, '-S', '127.0.0.1:' . $port, '-t', dirname(__DIR__) . '/Fixtures'],
-            [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-            $this->pipes,
-        );
-        self::assertIsResource($this->process);
+        $this->process = null;
 
-        try {
-            $deadline = microtime(true) + 5.0;
-            while (true) {
-                $status = proc_get_status($this->process);
-                if (! $status['running']) {
-                    self::fail('Local HTTP server exited before accepting a connection.');
+        for ($attempt = 1; $attempt <= 3; ++$attempt) {
+            $socket = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage);
+            self::assertIsResource($socket, sprintf('Could not reserve a local port: %s (%d).', $errorMessage, $errorCode));
+            $address = stream_socket_get_name($socket, false);
+            fclose($socket);
+
+            self::assertIsString($address);
+            $separator = strrpos($address, ':');
+            self::assertNotFalse($separator);
+            $port = (int) substr($address, $separator + 1);
+            self::assertGreaterThan(0, $port);
+
+            $this->pipes = [];
+            $this->process = proc_open(
+                [PHP_BINARY, '-S', '127.0.0.1:' . $port, '-t', dirname(__DIR__) . '/Fixtures'],
+                [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+                $this->pipes,
+            );
+            self::assertIsResource($this->process);
+
+            try {
+                $deadline = microtime(true) + 5.0;
+                while (true) {
+                    $status = proc_get_status($this->process);
+                    if (! $status['running']) {
+                        break;
+                    }
+                    if ($this->isServerReachable($port)) {
+                        return $port;
+                    }
+                    if (microtime(true) >= $deadline) {
+                        self::fail('Local HTTP server did not become ready within 5 seconds.');
+                    }
+                    usleep(20_000);
                 }
-                if ($this->isServerReachable($port)) {
-                    break;
-                }
-                if (microtime(true) >= $deadline) {
-                    self::fail('Local HTTP server did not become ready within 5 seconds.');
-                }
-                usleep(20_000);
+            } catch (Throwable $throwable) {
+                $this->stopServer();
+
+                throw $throwable;
             }
-        } catch (Throwable $throwable) {
-            $this->stopServer();
 
-            throw $throwable;
+            $this->stopServer();
         }
 
-        return $port;
+        self::fail('Local HTTP server exited before accepting a connection after 3 attempts.');
     }
 
     private function isServerReachable(int $port): bool
@@ -179,5 +196,7 @@ final class HttpClientE2ETest extends TestCase
         if (is_resource($this->process)) {
             proc_close($this->process);
         }
+        $this->process = null;
+        $this->pipes = [];
     }
 }
