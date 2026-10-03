@@ -9,6 +9,15 @@ All notable changes to this package are documented in this file. Format follows 
 
 ## [Unreleased]
 
+### Added
+
+- `allowRedirects` array options: `total_timeout` bounds the whole redirect chain with a single shared budget (also applied by `withDeadline()`), `track_redirects` exposes the final URL via `X-Joo-Effective-Uri` and the hop list via `X-Joo-Redirect-History`, and `cookies` (default `true`) replays cookies a server set on an earlier hop to a later one. The in-chain cookie jar honours domain, path, and `Secure` matching and never persists across requests.
+
+### Fixed
+
+- Same-host redirects no longer run the public/private DNS target policy, which previously rejected a legitimate relative redirect when the host only resolved via `/etc/hosts` or a transient lookup failed.
+- Sensitive headers (including `Cookie`) are no longer stripped when only the port changes or when the scheme upgrades `http` → `https`; they are still stripped on a cross-host redirect or an `https` → `http` downgrade.
+
 ## [4.3.0] - 2026-10-02
 
 ### Added

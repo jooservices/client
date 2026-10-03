@@ -27,7 +27,7 @@ final class DeadlineMiddleware implements MiddlewareInterface
                 connectTimeout: $options->connectTimeout,
                 proxy: $options->proxy,
                 verifySsl: $options->verifySsl,
-                allowRedirects: $options->allowRedirects,
+                allowRedirects: $this->redirectBudget($options->allowRedirects),
                 extra: $options->extra,
                 compression: $options->compression,
             ));
@@ -52,5 +52,30 @@ final class DeadlineMiddleware implements MiddlewareInterface
     private function elapsedSeconds(int $started): float
     {
         return (hrtime(true) - $started) / 1_000_000_000;
+    }
+
+    /**
+     * Give the redirect chain the same wall-clock budget as the deadline. Without this the per-hop
+     * timeout above would let a chain of N redirects run for up to N × deadline before the elapsed
+     * check here ever fires.
+     *
+     * @param bool|array<string, mixed>|null $allow
+     * @return bool|array<string, mixed>
+     */
+    private function redirectBudget(bool|array|null $allow): bool|array
+    {
+        if ($allow === false) {
+            return false;
+        }
+
+        $configured = is_array($allow) ? $allow : [];
+        $existing = $configured['total_timeout'] ?? null;
+        // A non-positive configured budget means "no chain deadline" downstream, which would let the
+        // chain outlive this middleware's deadline; fall back to the deadline in that case.
+        $configured['total_timeout'] = is_numeric($existing) && (float) $existing > 0.0
+            ? min((float) $existing, $this->seconds)
+            : $this->seconds;
+
+        return $configured;
     }
 }

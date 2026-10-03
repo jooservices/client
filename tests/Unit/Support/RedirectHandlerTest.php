@@ -6,6 +6,7 @@ namespace JOOservices\Client\Tests\Unit\Support;
 
 use JOOservices\Client\Dto\RequestOptions;
 use JOOservices\Client\Exceptions\RequestException;
+use JOOservices\Client\Exceptions\TimeoutException;
 use JOOservices\Client\Support\RedirectHandler;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
@@ -30,7 +31,7 @@ final class RedirectHandlerTest extends TestCase
             function (RequestInterface $request, RequestOptions $options, ?array $pinnedAddresses) use (&$seenPins): Response {
                 $seenPins[] = $pinnedAddresses;
 
-                return $request->getUri()->getPath() === '/from' ? new Response(302, ['Location' => 'https://abc.com/to']) : new Response(200);
+                return $request->getUri()->getPath() === '/from' ? new Response(302, ['Location' => 'https://example.com/to']) : new Response(200);
             },
         );
 
@@ -208,6 +209,238 @@ final class RedirectHandlerTest extends TestCase
             $factory->createRequest('GET', 'https://example.com/from'),
             new RequestOptions(allowRedirects: true),
             fn(): Response => new Response(302, ['Location' => 'https://no-such-host-ssrf-test.invalid/internal']),
+        );
+    }
+
+    #[Test]
+    public function testFollowsSameHostRedirectEvenWhenTheHostDoesNotResolveInDns(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $response = $handler->send(
+            $factory->createRequest('GET', 'https://hosts-only.internal/from'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1 ? new Response(302, ['Location' => '/to']) : new Response(200);
+            },
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame('https://hosts-only.internal/to', (string) $seen[1]->getUri());
+    }
+
+    #[Test]
+    public function testReplaysCookiesSetOnAnEarlierHopToTheNextSameHostHop(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/login'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1
+                    ? new Response(302, ['Location' => '/home', 'Set-Cookie' => 'sid=abc; Path=/; Secure'])
+                    : new Response(200);
+            },
+        );
+
+        self::assertSame('sid=abc', $seen[1]->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function testDoesNotReplayCookiesAcrossHosts(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/login'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1
+                    ? new Response(302, ['Location' => 'https://example.com/home', 'Set-Cookie' => 'sid=abc; Path=/'])
+                    : new Response(200);
+            },
+        );
+
+        self::assertSame('', $seen[1]->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function testDoesNotReplayCookiesWhenDisabled(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/login'),
+            new RequestOptions(allowRedirects: ['cookies' => false]),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1
+                    ? new Response(302, ['Location' => '/home', 'Set-Cookie' => 'sid=abc; Path=/'])
+                    : new Response(200);
+            },
+        );
+
+        self::assertSame('', $seen[1]->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function testKeepsCookiesWhenUpgradingToHttpsOnTheSameHost(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'http://abc.com/from')->withHeader('Cookie', 'sid=1'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1 ? new Response(302, ['Location' => 'https://abc.com/to']) : new Response(200);
+            },
+        );
+
+        self::assertSame('sid=1', $seen[1]->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function testStripsCookiesWhenDowngradingToPlainHttp(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/from')->withHeader('Cookie', 'sid=1'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1 ? new Response(302, ['Location' => 'http://abc.com/to']) : new Response(200);
+            },
+        );
+
+        self::assertSame('', $seen[1]->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function testKeepsCookiesWhenOnlyThePortChanges(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/from')->withHeader('Cookie', 'sid=1'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1 ? new Response(302, ['Location' => 'https://abc.com:8443/to']) : new Response(200);
+            },
+        );
+
+        self::assertSame('sid=1', $seen[1]->getHeaderLine('Cookie'));
+        self::assertSame(8443, $seen[1]->getUri()->getPort());
+    }
+
+    #[Test]
+    public function testDoesNotReplayJarCookiesOnADowngradeToPlainHttp(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/login'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1
+                    ? new Response(302, ['Location' => 'http://abc.com/home', 'Set-Cookie' => 'sid=abc; Path=/'])
+                    : new Response(200);
+            },
+        );
+
+        self::assertSame('', $seen[1]->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
+    public function testTracksTheEffectiveUriWhenRequested(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $calls = 0;
+
+        $response = $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/from'),
+            new RequestOptions(allowRedirects: ['track_redirects' => true]),
+            function () use (&$calls): Response {
+                ++$calls;
+
+                return $calls === 1 ? new Response(302, ['Location' => 'https://example.com/to']) : new Response(200);
+            },
+        );
+
+        self::assertSame('https://example.com/to', $response->getHeaderLine('X-Joo-Effective-Uri'));
+        self::assertSame('https://example.com/to', $response->getHeaderLine('X-Joo-Redirect-History'));
+    }
+
+    #[Test]
+    public function testSharesTheTotalTimeoutBudgetAcrossHops(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $timeouts = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/from'),
+            new RequestOptions(timeout: 30.0, allowRedirects: ['total_timeout' => 2.0]),
+            function (RequestInterface $current, RequestOptions $options) use (&$timeouts): Response {
+                $timeouts[] = $options->timeout;
+
+                return count($timeouts) === 1 ? new Response(302, ['Location' => '/to']) : new Response(200);
+            },
+        );
+
+        self::assertNotNull($timeouts[0]);
+        self::assertLessThanOrEqual(2.0, $timeouts[0]);
+        self::assertNotNull($timeouts[1]);
+        self::assertLessThanOrEqual(2.0, $timeouts[1]);
+    }
+
+    #[Test]
+    public function testThrowsWhenTheTotalTimeoutBudgetIsExhausted(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+
+        $this->expectException(TimeoutException::class);
+        $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/from'),
+            new RequestOptions(allowRedirects: ['total_timeout' => 0.001]),
+            function (): Response {
+                usleep(20_000);
+
+                return new Response(302, ['Location' => '/to']);
+            },
         );
     }
 }
