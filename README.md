@@ -47,7 +47,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 ## Installation
 
 ```bash
-composer require jooservices/client:^4.0
+composer require jooservices/client:^4.4
 ```
 
 ## Quick start
@@ -107,7 +107,7 @@ Use the `compression` request option to override the builder default for one req
 
 ## Redirects
 
-Redirects are followed by default (up to 5 hops) and re-checked per hop for credential stripping and the public/private target policy. Pass an array to `withRedirects()` (or the `allowRedirects` request option) to tune the chain:
+Redirects are followed by default (up to 5 hops). Credentials are checked on every hop, and cross-host targets are re-checked against the public/private target policy; same-host redirects skip DNS-based target-policy resolution. Pass an array to `withRedirects()` (or the `allowRedirects` request option) to tune the chain:
 
 ```php
 $client = ClientBuilder::create()
