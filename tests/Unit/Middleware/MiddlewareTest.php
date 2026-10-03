@@ -545,6 +545,33 @@ final class MiddlewareTest extends TestCase
     }
 
     #[Test]
+    public function testDeadlineReplacesANonPositiveRedirectBudgetWithItsOwnDeadline(): void
+    {
+        $capturing = new class implements \JOOservices\Client\Contracts\RequestHandlerInterface {
+            public ?RequestOptions $seen = null;
+
+            public function handle(RequestInterface $request, RequestOptions $options): ResponseInterface
+            {
+                $this->seen = $options;
+
+                return new Response();
+            }
+        };
+
+        $deadline = new DeadlineMiddleware(5.0);
+
+        $deadline->process($this->request(), new RequestOptions(allowRedirects: ['total_timeout' => 0.0]), $capturing);
+        self::assertInstanceOf(RequestOptions::class, $capturing->seen);
+        self::assertSame(['total_timeout' => 5.0], $capturing->seen->allowRedirects);
+
+        $deadline->process($this->request(), new RequestOptions(allowRedirects: ['total_timeout' => 2.0]), $capturing);
+        self::assertSame(['total_timeout' => 2.0], $capturing->seen->allowRedirects);
+
+        $deadline->process($this->request(), new RequestOptions(allowRedirects: ['total_timeout' => 30.0]), $capturing);
+        self::assertSame(['total_timeout' => 5.0], $capturing->seen->allowRedirects);
+    }
+
+    #[Test]
     public function testBulkheadRejectsAtCapacityAndReleaseDecrementsRatherThanClearing(): void
     {
         $store = new InMemoryBulkheadStore();
