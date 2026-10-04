@@ -9,6 +9,12 @@ All notable changes to this package are documented in this file. Format follows 
 
 ## [Unreleased]
 
+## [4.4.1] - 2026-10-03
+
+### Security
+
+- Keep redirect-chain cookies with a `Domain` attribute scoped to the response host. Without a public suffix list, honoring a broader domain could replay a cookie across unrelated registrable domains; redirects between sibling subdomains therefore no longer share these temporary cookies.
+
 ## [4.4.0] - 2026-10-03
 
 ### Added
@@ -52,7 +58,8 @@ All notable changes to this package are documented in this file. Format follows 
 - Added cross-origin redirect credential protection and public-to-private redirect policy.
 - Added streaming cURL bodies, PSR-16 resilience adapters, optional JSON Schema validation, WAN-IP middleware, reusable fakes, Docker quality gates, CI/release workflows and benchmark support.
 
-[Unreleased]: https://github.com/jooservices/client/compare/v4.4.0...HEAD
+[Unreleased]: https://github.com/jooservices/client/compare/v4.4.1...HEAD
+[4.4.1]: https://github.com/jooservices/client/compare/v4.4.0...v4.4.1
 [4.4.0]: https://github.com/jooservices/client/compare/v4.3.0...v4.4.0
 [4.3.0]: https://github.com/jooservices/client/compare/v4.2.0...v4.3.0
 [4.2.0]: https://github.com/jooservices/client/compare/v4.1.0...v4.2.0
