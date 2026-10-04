@@ -22,7 +22,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 - v4 is a strict PSR-18 `HttpClient` — `sendRequest()` plus `send($request, $options)`; verb methods are removed.
 - Guzzle option bags are replaced by a portable, validated `RequestOptions` DTO.
 - Fluent immutable `RequestBuilder` produces a `PreparedRequest` (PSR-7 form plus options).
-- Redirect-chain cookies carrying a `Domain` attribute stay scoped to the response host unless a public suffix list can validate broader sharing; sibling subdomains do not share these temporary cookies.
+- Redirect-chain cookies carrying a `Domain` attribute stay scoped to the response host; sibling subdomains do not share these temporary cookies.
 - `Response` wrapper adds status helpers, cached JSON, download-size ceiling, opt-in `throw()`, and DTO mapping.
 - Deterministic test fakes replace live-network dependencies.
 
