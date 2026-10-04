@@ -278,6 +278,29 @@ final class RedirectHandlerTest extends TestCase
     }
 
     #[Test]
+    public function testDoesNotReplayMultiLabelPublicSuffixCookieAcrossHosts(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $seen = [];
+
+        $handler->send(
+            $factory->createRequest('GET', 'https://attacker.co.uk/login'),
+            new RequestOptions(allowRedirects: true),
+            function (RequestInterface $current) use (&$seen): Response {
+                $seen[] = $current;
+
+                return count($seen) === 1
+                    ? new Response(302, ['Location' => 'https://victim.co.uk/home', 'Set-Cookie' => 'sid=abc; Domain=co.uk; Path=/'])
+                    : new Response(200);
+            },
+        );
+
+        self::assertCount(2, $seen);
+        self::assertSame('', $seen[1]->getHeaderLine('Cookie'));
+    }
+
+    #[Test]
     public function testDoesNotReplayCookiesWhenDisabled(): void
     {
         $factory = new Psr17Factory();

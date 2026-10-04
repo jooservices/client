@@ -31,12 +31,13 @@ final class CookieJarTest extends TestCase
     }
 
     #[Test]
-    public function testDomainCookieMatchesSubdomains(): void
+    public function testDomainCookieRemainsScopedToTheResponseHost(): void
     {
         $jar = new CookieJar();
         $jar->storeFromResponse(new Uri('https://abc.com/login'), new Response(200, ['Set-Cookie' => 'sid=abc; Domain=abc.com; Path=/']));
 
-        self::assertSame('sid=abc', $jar->headerFor(new Uri('https://sub.abc.com/home')));
+        self::assertSame('sid=abc', $jar->headerFor(new Uri('https://abc.com/home')));
+        self::assertNull($jar->headerFor(new Uri('https://sub.abc.com/home')));
     }
 
     #[Test]
@@ -57,6 +58,16 @@ final class CookieJarTest extends TestCase
 
         self::assertNull($jar->headerFor(new Uri('https://victim.com/home')));
         self::assertNull($jar->headerFor(new Uri('https://abc.com/home')));
+    }
+
+    #[Test]
+    public function testDoesNotReplayAMultiLabelPublicSuffixCookieToAnotherHost(): void
+    {
+        $jar = new CookieJar();
+        $jar->storeFromResponse(new Uri('https://attacker.co.uk/login'), new Response(200, ['Set-Cookie' => 'sid=abc; Domain=co.uk; Path=/']));
+
+        self::assertSame('sid=abc', $jar->headerFor(new Uri('https://attacker.co.uk/home')));
+        self::assertNull($jar->headerFor(new Uri('https://victim.co.uk/home')));
     }
 
     #[Test]
