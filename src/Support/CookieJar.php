@@ -130,16 +130,13 @@ final class CookieJar
         $hostOnly = true;
         if (array_key_exists('domain', $attributes)) {
             $candidate = strtolower(ltrim($attributes['domain'], '.'));
-            // Reject public suffixes (RFC 6265 §5.3). A single-label candidate (e.g. "com") would
-            // otherwise let a server scope a cookie to every host under that suffix and have it
-            // replayed to a third-party host after a redirect. Multi-label public suffixes
-            // (e.g. "co.uk") are not blocked here — that needs a public suffix list, which this
-            // dependency-free client does not ship; treat the Domain attribute as best-effort.
             if ($candidate === '' || ! str_contains($candidate, '.') || ! $this->domainMatches($host, $candidate, false)) {
                 return null;
             }
-            $domain = $candidate;
-            $hostOnly = false;
+            // Without a public suffix list we cannot safely distinguish a registrable domain
+            // (example.com) from a multi-label public suffix (co.uk). Keep the cookie scoped to
+            // the response host instead of broadening it to the Domain attribute; this prevents
+            // a redirect from replaying a public-suffix cookie to an unrelated registrable domain.
         }
 
         $path = $this->resolvePath($attributes, $requestPath);
