@@ -15,6 +15,7 @@ use Psr\Http\Client\NetworkExceptionInterface;
 use Psr\Http\Client\RequestExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Throwable;
 
 final class PsrTransport implements TransportInterface
 {
@@ -31,6 +32,35 @@ final class PsrTransport implements TransportInterface
     {
         unset($options);
 
+        $body = $request->getBody();
+        $position = null;
+        try {
+            if ($body->isSeekable()) {
+                $position = $body->tell();
+            }
+        } catch (Throwable $error) {
+            throw new RequestException($request, 'Unable to preserve the request body position.', $error);
+        }
+
+        try {
+            $response = $this->send($request);
+        } catch (Throwable $sendFailure) {
+            try {
+                $this->restoreBodyPosition($request, $position);
+            } catch (RequestException) {
+                // Keep the send failure primary; a failed restore must not hide the original error.
+            }
+
+            throw $sendFailure;
+        }
+
+        $this->restoreBodyPosition($request, $position);
+
+        return $response;
+    }
+
+    private function send(RequestInterface $request): ResponseInterface
+    {
         try {
             return $this->client->sendRequest($request);
         } catch (NetworkExceptionInterface $error) {
@@ -42,6 +72,19 @@ final class PsrTransport implements TransportInterface
             throw new RequestException($request, $error->getMessage(), $error);
         } catch (ClientExceptionInterface $error) {
             throw new NetworkConnectionException($request, $error->getMessage(), $error);
+        }
+    }
+
+    private function restoreBodyPosition(RequestInterface $request, ?int $position): void
+    {
+        if ($position === null) {
+            return;
+        }
+
+        try {
+            $request->getBody()->seek($position);
+        } catch (Throwable $error) {
+            throw new RequestException($request, 'Unable to restore the request body position after sending.', $error);
         }
     }
 }

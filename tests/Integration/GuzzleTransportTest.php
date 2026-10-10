@@ -53,6 +53,28 @@ final class GuzzleTransportTest extends TestCase
         }
     }
 
+    #[Test]
+    public function testGuzzleRewindsASeekableRequestBodyForSubsequentSends(): void
+    {
+        $port = $this->startServer();
+
+        try {
+            $factory = new Psr17Factory();
+            $payload = Factory::create()->sentence(8);
+            $request = $factory->createRequest('PUT', 'http://127.0.0.1:' . $port . '/echo-body.php')
+                ->withBody($factory->createStream($payload));
+            $transport = new GuzzleTransport(new Client(['proxy' => ['http' => '', 'https' => '']]), $factory, $factory);
+
+            $first = $transport->handle($request, new RequestOptions(timeout: 2, connectTimeout: 2));
+            $second = $transport->handle($request, new RequestOptions(timeout: 2, connectTimeout: 2));
+
+            self::assertSame($payload, (string) $first->getBody());
+            self::assertSame($payload, (string) $second->getBody());
+        } finally {
+            $this->stopServer();
+        }
+    }
+
     private function startServer(): int
     {
         $port = random_int(20000, 40000);

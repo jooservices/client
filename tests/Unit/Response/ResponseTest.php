@@ -12,6 +12,7 @@ use JOOservices\Client\Tests\Fixtures\UserDto;
 use Nyholm\Psr7\Response as PsrResponse;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\StreamInterface;
 
 final class ResponseTest extends TestCase
 {
@@ -85,9 +86,12 @@ final class ResponseTest extends TestCase
     #[Test]
     public function testBodyRejectsResponsesLargerThanTheSizeLimit(): void
     {
-        $oversized = str_repeat('x', 104_857_601);
+        $stream = $this->createMock(StreamInterface::class);
+        $stream->method('getSize')->willReturn(104_857_601);
+        $stream->expects(self::never())->method('read');
+
         $this->expectException(DownloadSizeExceededException::class);
-        Response::from(new PsrResponse(200, [], $oversized))->body();
+        Response::from(new PsrResponse(200, [], $stream))->body();
     }
 
     #[Test]

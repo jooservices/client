@@ -7,6 +7,7 @@ namespace JOOservices\Client\Transport;
 use JOOservices\Client\Contracts\TransportCapabilities;
 use JOOservices\Client\Contracts\TransportInterface;
 use JOOservices\Client\Dto\RequestOptions;
+use JOOservices\Client\Exceptions\RequestException;
 use JOOservices\Client\Support\RedirectHandler;
 use JOOservices\Client\Transport\Guzzle\GuzzleSender;
 use Psr\Http\Message\RequestInterface;
@@ -46,10 +47,16 @@ final class GuzzleTransport implements TransportInterface
         return $this->redirects->send(
             $request,
             $options,
-            // Guzzle (or any injected PSR-18-shaped client) does its own DNS resolution with no
-            // equivalent of curl's CURLOPT_RESOLVE available through this generic send() contract, so
-            // the verified pin RedirectHandler offers here can't be honored — it's simply unused.
-            fn(RequestInterface $current, RequestOptions $inner, ?array $pinnedAddresses): ResponseInterface => $this->sender->send($current, $inner),
+            function (RequestInterface $current, RequestOptions $inner, ?array $pinnedAddresses): ResponseInterface {
+                if ($pinnedAddresses !== null) {
+                    throw new RequestException(
+                        $current,
+                        'GuzzleTransport cannot enforce verified DNS pinning for this cross-host redirect.',
+                    );
+                }
+
+                return $this->sender->send($current, $inner);
+            },
         );
     }
 }

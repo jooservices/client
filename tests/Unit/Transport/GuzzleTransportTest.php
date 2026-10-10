@@ -11,12 +11,15 @@ use JOOservices\Client\Transport\FailoverTransport;
 use JOOservices\Client\Transport\GuzzleTransport;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response as PsrResponse;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\NetworkExceptionInterface;
 use Psr\Http\Client\RequestExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+
+require_once __DIR__ . '/../../Fixtures/redirect-target-dns-stub.php';
 
 final class GuzzleTransportTest extends TestCase
 {
@@ -63,6 +66,75 @@ final class GuzzleTransportTest extends TestCase
         self::assertFalse($client->options['http_errors']);
         self::assertFalse($client->options['allow_redirects']);
         self::assertArrayNotHasKey('decode_content', $client->options);
+    }
+
+    #[Test]
+    public function testFailsClosedBeforeFollowingCrossHostRedirectWhenDnsPinsAreRequired(): void
+    {
+        $factory = new Psr17Factory();
+        $client = new class {
+            /** @var list<RequestInterface> */
+            public array $requests = [];
+
+            /** @param array<string, mixed> $options */
+            public function send(RequestInterface $request, array $options = []): ResponseInterface
+            {
+                $this->requests[] = $request;
+
+                return count($this->requests) === 1
+                    ? new PsrResponse(302, ['Location' => 'https://example.com/to'])
+                    : new PsrResponse(200);
+            }
+        };
+        $transport = new GuzzleTransport($client, $factory, $factory);
+
+        try {
+            $transport->handle(
+                $factory->createRequest('GET', 'https://abc.com/from'),
+                new RequestOptions(allowRedirects: true),
+            );
+            self::fail('Expected a cross-host redirect that requires DNS pinning to fail closed.');
+        } catch (JooRequestException $exception) {
+            self::assertStringContainsString('DNS pinning', $exception->getMessage());
+        }
+
+        self::assertCount(1, $client->requests);
+        self::assertSame('https://abc.com/from', (string) $client->requests[0]->getUri());
+    }
+
+    /** @param bool|array<string, mixed>|null $allowRedirects */
+    #[Test]
+    #[DataProvider('unpinnedCrossHostRedirects')]
+    public function testFollowsCrossHostRedirectsWhenDnsPinningIsNotRequired(string $location, bool|array|null $allowRedirects): void
+    {
+        $factory = new Psr17Factory();
+        $client = new class {
+            /** @var list<RequestInterface> */
+            public array $requests = [];
+
+            public string $redirectTarget = '';
+
+            /** @param array<string, mixed> $options */
+            public function send(RequestInterface $request, array $options = []): ResponseInterface
+            {
+                $this->requests[] = $request;
+
+                return count($this->requests) === 1
+                    ? new PsrResponse(302, ['Location' => $this->redirectTarget])
+                    : new PsrResponse(200);
+            }
+        };
+        $client->redirectTarget = $location;
+        $transport = new GuzzleTransport($client, $factory, $factory);
+
+        $response = $transport->handle(
+            $factory->createRequest('GET', 'https://abc.com/from'),
+            new RequestOptions(allowRedirects: $allowRedirects),
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertCount(2, $client->requests);
+        self::assertSame($location, (string) $client->requests[1]->getUri());
     }
 
     #[Test]
@@ -188,5 +260,12 @@ final class GuzzleTransportTest extends TestCase
 
         $this->expectException(JooRequestException::class);
         new GuzzleTransport($client, $factory, $factory)->handle($factory->createRequest('GET', 'https://abc.com'), new RequestOptions());
+    }
+
+    /** @return iterable<string, array{string, bool|array<string, mixed>|null}> */
+    public static function unpinnedCrossHostRedirects(): iterable
+    {
+        yield 'literal public address' => ['https://93.184.216.34/to', true];
+        yield 'explicit private target opt-in' => ['https://private.example/to', ['allow_private' => true]];
     }
 }
