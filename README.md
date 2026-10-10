@@ -32,7 +32,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 - Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` / `withMultipart()` (auto `Content-Type`).
 - `Response::from()`: status helpers, header access, BOM-stripping cached JSON, 100 MB body ceiling, `throw()`, `toPsrResponse()` escape hatch.
 - Ranked middleware pipeline with canonical ordering and presets: observability, resilience, auth/security, and DX.
-- Resilience: retry, circuit breaker, rate limit, bulkhead, fallback, deadline — in-memory stores by default, PSR-16 adapters supported.
+- Resilience: retry, circuit breaker, rate limit, bulkhead, fallback, deadline — in-memory stores by default, PSR-16 adapters supported. A `withDeadline()` budget includes request attempts and retry backoff; each attempt timeout is clamped to the remaining budget.
 - Security defaults: TLS verification on, CR/LF injection rejected, credential stripping and private-IP policy on redirects, download-size guard, log sanitizer.
 - Transports: `CurlTransport` (default), `PsrTransport`, `GuzzleTransport` (optional), `FailoverTransport`.
 - Deterministic testing: fake registry, scripted `TestResponseSequence`s, recorded-request assertions, `InteractsWithHttpClient` trait.

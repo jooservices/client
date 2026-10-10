@@ -43,6 +43,25 @@ final class PsrTransport implements TransportInterface
         }
 
         try {
+            $response = $this->send($request);
+        } catch (Throwable $sendFailure) {
+            try {
+                $this->restoreBodyPosition($request, $position);
+            } catch (RequestException) {
+                // Keep the send failure primary; a failed restore must not hide the original error.
+            }
+
+            throw $sendFailure;
+        }
+
+        $this->restoreBodyPosition($request, $position);
+
+        return $response;
+    }
+
+    private function send(RequestInterface $request): ResponseInterface
+    {
+        try {
             return $this->client->sendRequest($request);
         } catch (NetworkExceptionInterface $error) {
             // Normalize into this library's own exception types: an injected PSR-18 client's raw
@@ -53,14 +72,19 @@ final class PsrTransport implements TransportInterface
             throw new RequestException($request, $error->getMessage(), $error);
         } catch (ClientExceptionInterface $error) {
             throw new NetworkConnectionException($request, $error->getMessage(), $error);
-        } finally {
-            if ($position !== null) {
-                try {
-                    $body->seek($position);
-                } catch (Throwable $error) {
-                    throw new RequestException($request, 'Unable to restore the request body position after sending.', $error);
-                }
-            }
+        }
+    }
+
+    private function restoreBodyPosition(RequestInterface $request, ?int $position): void
+    {
+        if ($position === null) {
+            return;
+        }
+
+        try {
+            $request->getBody()->seek($position);
+        } catch (Throwable $error) {
+            throw new RequestException($request, 'Unable to restore the request body position after sending.', $error);
         }
     }
 }

@@ -47,6 +47,39 @@ final class LogSanitizerTest extends TestCase
     }
 
     #[Test]
+    public function testRedactsSensitiveValueIncludingNonParameterSemicolonSuffix(): void
+    {
+        $faker = Factory::create();
+        $token = $faker->sha256() . ';secret-' . $faker->sha256();
+        $safeValue = $faker->word();
+        $uri = "https://api.example.test/?token={$token}&state={$safeValue}";
+
+        $sanitized = (new LogSanitizer())->sanitize(['uri' => $uri]);
+
+        self::assertSame(
+            "https://api.example.test/?token=[redacted]&state={$safeValue}",
+            $sanitized['uri'],
+        );
+    }
+
+    #[Test]
+    public function testDoesNotTreatSemicolonFollowedByAnEmptyKeyAsAParameterBoundary(): void
+    {
+        $faker = Factory::create();
+        $token = $faker->sha256();
+        $suffix = $faker->sha256();
+        $safeValue = $faker->word();
+        $uri = "https://api.example.test/?token={$token};={$suffix}&state={$safeValue}";
+
+        $sanitized = (new LogSanitizer())->sanitize(['uri' => $uri]);
+
+        self::assertSame(
+            "https://api.example.test/?token=[redacted]&state={$safeValue}",
+            $sanitized['uri'],
+        );
+    }
+
+    #[Test]
     public function testRedactsTheCompleteSensitiveValueWhenItContainsAQuestionMark(): void
     {
         $faker = Factory::create();
@@ -76,5 +109,17 @@ final class LogSanitizerTest extends TestCase
             'https://api.example.test/path#access_token=[redacted]&state=' . $safeValue . '&panel=details',
             $sanitized['uri'],
         );
+    }
+
+    #[Test]
+    public function testRedactsSensitiveValuesOfAtLeastOneHundredKilobytes(): void
+    {
+        $faker = Factory::create();
+        $token = $faker->lexify(str_repeat('?', 100 * 1024));
+        $uri = "https://api.example.test/?token={$token}&state=safe";
+
+        $sanitized = (new LogSanitizer())->sanitize(['uri' => $uri]);
+
+        self::assertSame('https://api.example.test/?token=[redacted]&state=safe', $sanitized['uri']);
     }
 }

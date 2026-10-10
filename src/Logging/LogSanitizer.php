@@ -19,22 +19,88 @@ final class LogSanitizer
                 $context[$key] = $this->sanitize($value);
             } elseif (is_string($value)) {
                 $value = preg_replace('/(:\/\/)[^\/\s@]+:[^\/\s@]*@/', '$1[redacted]@', $value) ?? $value;
-                $context[$key] = preg_replace_callback(
-                    '/([?&#;])([^=?&#;]*=)([^&#;]*)/',
-                    static function (array $matches): string {
-                        $name = rawurldecode(substr($matches[2], 0, -1));
-                        if (preg_match('/^[\w-]*(?:token|api[_-]?key|password|secret|sig|signature|auth|jwt|session|sid|credential)[\w-]*$/i', $name) !== 1) {
-                            return $matches[0];
-                        }
-
-                        return $matches[1] . $matches[2] . '[redacted]';
-                    },
-                    $value,
-                ) ?? $value;
+                $context[$key] = $this->sanitizeQueryValues($value);
             }
         }
 
         return $context;
+    }
+
+    private function sanitizeQueryValues(string $value): string
+    {
+        $length = strlen($value);
+        $result = '';
+        $copyFrom = 0;
+
+        for ($offset = 0; $offset < $length; ++$offset) {
+            if (!str_contains('?#&;', $value[$offset])) {
+                continue;
+            }
+
+            $parameter = $this->parseQueryParameterAt($value, $offset + 1);
+            if ($parameter === null) {
+                continue;
+            }
+
+            $valueEnd = $this->findQueryValueEnd($value, $parameter['valueStart']);
+            if ($this->isSensitiveQueryKey(rawurldecode($parameter['key']))) {
+                $result .= substr($value, $copyFrom, $parameter['valueStart'] - $copyFrom) . '[redacted]';
+                $copyFrom = $valueEnd;
+            }
+
+            $offset = $valueEnd - 1;
+        }
+
+        return $copyFrom === 0 ? $value : $result . substr($value, $copyFrom);
+    }
+
+    /**
+     * @return array{key: string, valueStart: int}|null
+     */
+    private function parseQueryParameterAt(string $value, int $start): ?array
+    {
+        $length = strlen($value);
+
+        for ($offset = $start; $offset < $length; ++$offset) {
+            if ($value[$offset] === '=') {
+                if ($offset === $start) {
+                    return null;
+                }
+
+                return [
+                    'key' => substr($value, $start, $offset - $start),
+                    'valueStart' => $offset + 1,
+                ];
+            }
+
+            if (str_contains('?#&;', $value[$offset])) {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    private function findQueryValueEnd(string $value, int $start): int
+    {
+        $length = strlen($value);
+
+        for ($offset = $start; $offset < $length; ++$offset) {
+            if ($value[$offset] === '&' || $value[$offset] === '#') {
+                return $offset;
+            }
+
+            if ($value[$offset] === ';' && $this->parseQueryParameterAt($value, $offset + 1) !== null) {
+                return $offset;
+            }
+        }
+
+        return $length;
+    }
+
+    private function isSensitiveQueryKey(string $key): bool
+    {
+        return preg_match('/^[\w-]*(?:token|api[_-]?key|password|secret|sig|signature|auth|jwt|session|sid|credential)[\w-]*$/i', $key) === 1;
     }
 
     private function isSecret(string $key): bool

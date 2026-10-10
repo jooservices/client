@@ -20,15 +20,13 @@ final class MiddlewarePipeline implements RequestHandlerInterface
     public function __construct(array $middlewares, RequestHandlerInterface $terminal)
     {
         $boundedTerminal = new class ($terminal) implements RequestHandlerInterface {
-            private const DEADLINE_OPTION = '__joo_client_deadline_ns';
-
             public function __construct(private readonly RequestHandlerInterface $terminal)
             {
             }
 
             public function handle(RequestInterface $request, RequestOptions $options): ResponseInterface
             {
-                $deadline = $options->extra[self::DEADLINE_OPTION] ?? null;
+                $deadline = $options->extra[DeadlineOption::KEY] ?? null;
                 if (! is_int($deadline)) {
                     return $this->terminal->handle($request, $options);
                 }
@@ -39,7 +37,7 @@ final class MiddlewarePipeline implements RequestHandlerInterface
                 }
 
                 $extra = $options->extra;
-                unset($extra[self::DEADLINE_OPTION]);
+                unset($extra[DeadlineOption::KEY]);
 
                 $allowRedirects = $options->allowRedirects;
                 if (is_array($allowRedirects)) {

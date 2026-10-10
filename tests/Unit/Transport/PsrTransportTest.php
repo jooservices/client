@@ -20,6 +20,7 @@ use Psr\Http\Client\NetworkExceptionInterface;
 use Psr\Http\Client\RequestExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 final class PsrTransportTest extends TestCase
 {
@@ -73,6 +74,99 @@ final class PsrTransportTest extends TestCase
 
         self::assertSame($initialPosition, $body->tell());
         self::assertSame(substr($payload, $initialPosition), $body->getContents());
+    }
+
+    #[Test]
+    public function testPreservesANetworkFailureWhenRestoringTheBodyFailsSoFailoverCanContinue(): void
+    {
+        $factory = new Psr17Factory();
+        $payload = Factory::create()->sentence(8);
+        $body = self::createStub(StreamInterface::class);
+        $body->method('isSeekable')->willReturn(true);
+        $body->method('tell')->willReturn(0);
+        $body->method('getContents')->willReturn($payload);
+        $seekCalls = 0;
+        $body->method('seek')->willReturnCallback(static function (int $offset, int $whence = SEEK_SET) use (&$seekCalls): void {
+            ++$seekCalls;
+            if ($seekCalls === 1) {
+                throw new \RuntimeException('The stream could not be restored.');
+            }
+        });
+        $request = $factory->createRequest('PUT', 'https://abc.com/resource')->withBody($body);
+        $failing = new class implements ClientInterface {
+            public function sendRequest(RequestInterface $request): ResponseInterface
+            {
+                $request->getBody()->getContents();
+
+                throw new class ('offline') extends \RuntimeException implements NetworkExceptionInterface {
+                    public function getRequest(): RequestInterface
+                    {
+                        return new Psr17Factory()->createRequest('PUT', 'https://abc.com/resource');
+                    }
+                };
+            }
+        };
+        $fallback = $this->createMock(\JOOservices\Client\Contracts\TransportInterface::class);
+        $fallback->expects(self::once())->method('handle')->willReturn(new PsrResponse(204));
+
+        $response = (new FailoverTransport([new PsrTransport($failing), $fallback]))->handle($request, new RequestOptions());
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertSame(2, $seekCalls);
+    }
+
+    #[Test]
+    public function testReportsBodyRestoreFailureWhenTheClientSendSucceeds(): void
+    {
+        $factory = new Psr17Factory();
+        $body = self::createStub(StreamInterface::class);
+        $body->method('isSeekable')->willReturn(true);
+        $body->method('tell')->willReturn(0);
+        $body->method('seek')->willThrowException(new \RuntimeException('The stream could not be restored.'));
+        $request = $factory->createRequest('PUT', 'https://abc.com/resource')->withBody($body);
+        $inner = new class implements ClientInterface {
+            public function sendRequest(RequestInterface $request): ResponseInterface
+            {
+                return new PsrResponse(200);
+            }
+        };
+
+        try {
+            (new PsrTransport($inner))->handle($request, new RequestOptions());
+            self::fail('Expected a RequestException when restoring the body fails after a successful send.');
+        } catch (JooRequestException $exception) {
+            self::assertSame($request, $exception->getRequest());
+            self::assertInstanceOf(\RuntimeException::class, $exception->getPrevious());
+        }
+    }
+
+    #[Test]
+    public function testPreservesAnUnexpectedSendFailureWhenBodyRestorationAlsoFails(): void
+    {
+        $factory = new Psr17Factory();
+        $body = self::createStub(StreamInterface::class);
+        $body->method('isSeekable')->willReturn(true);
+        $body->method('tell')->willReturn(0);
+        $body->method('seek')->willThrowException(new \RuntimeException('The stream could not be restored.'));
+        $request = $factory->createRequest('PUT', 'https://abc.com/resource')->withBody($body);
+        $sendFailure = new \RuntimeException('Unexpected client failure.');
+        $inner = new class ($sendFailure) implements ClientInterface {
+            public function __construct(private readonly \Throwable $failure)
+            {
+            }
+
+            public function sendRequest(RequestInterface $request): ResponseInterface
+            {
+                throw $this->failure;
+            }
+        };
+
+        try {
+            (new PsrTransport($inner))->handle($request, new RequestOptions());
+            self::fail('Expected the unexpected client exception to remain primary.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame($sendFailure, $exception);
+        }
     }
 
     #[Test]

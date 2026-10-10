@@ -20,8 +20,6 @@ use Throwable;
 
 final class RetryMiddleware implements MiddlewareInterface
 {
-    private const DEADLINE_OPTION = '__joo_client_deadline_ns';
-
     public function __construct(
         private readonly RetryConfig $config,
         private readonly SleeperInterface $sleeper = new UsleepSleeper(),
@@ -68,7 +66,7 @@ final class RetryMiddleware implements MiddlewareInterface
 
     private function deadline(RequestOptions $options): ?int
     {
-        $deadline = $options->extra[self::DEADLINE_OPTION] ?? null;
+        $deadline = $options->extra[DeadlineOption::KEY] ?? null;
 
         return is_int($deadline) ? $deadline : null;
     }

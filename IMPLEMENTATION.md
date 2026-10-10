@@ -53,9 +53,9 @@ follows QA. A green focused check is not a substitute for the final gates.
   `PsrTransport`, and a real successful `FailoverTransport` fallback using a
   deterministic failing first transport. All paths use one local PHP target
   server; no external network is used, and all E2E suites run.
-- **AC-10:** Configured quality and security gates are green. Assess next-minor
-  readiness; do not select a version, tag, or publish without root
-  confirmation.
+- **AC-10:** Configured quality and security gates are green. Assess readiness
+  for the user-approved 4.5.0 release; merge, tag, and publish only through the
+  repository's required PR and release workflow.
 
 ## Tickets
 
@@ -437,28 +437,34 @@ follows QA. A green focused check is not a substitute for the final gates.
 - **Ask for help when:** The scope gate fails, required diff/test evidence is
   missing, a finding's disposition is unclear, or a required re-verification
   fails.
-- **Progress / handover:** Review completed and accepted by root. Rounds 1–3
-  passed with no open findings. The reviewer verified F-1 (cacheable 2xx
-  behavior), F-2 (deadline enforcement at the terminal boundary), and F-3
-  (response-only size cap preserving HMAC request signing). Scorecard: zero
-  critical, required-open, optional, or nit findings. The optional JSON Schema
-  validator test was skipped because its dependency is not installed; this is
-  recorded as a QA limitation.
+- **Progress / handover:** Reviewer completed Rounds 1–3. F-1 through F-9 are
+  fixed and verified. F-10 (Optional), which identified stale finding and QA
+  statuses in this file, was corrected and verified by the reviewer; the
+  README deadline note was also verified. Root applied the reviewer's title
+  nit so Ticket 9 names 4.5.0 and synchronized final gate status. No review
+  findings remain open.
 
-### Ticket 9 — Independent final QA and next-minor readiness assessment
+### Ticket 9 — Independent final QA and 4.5.0 readiness assessment
 
 - **Traceability:** AC-10; independently verify AC-1 through AC-9 from the
   accepted implementation and review evidence.
 - **Assigned to:** `joo-qa` (Codex runtime default)
-- **Status:** done
-- **QA:** Accepted — local checks pass; remote OSV, Dependency Review,
-  Codecov, and Sonar statuses remain unverified. Semgrep scanned tracked files
-  only; the optional JSON Schema test was skipped.
+- **Status:** in-progress
+- **QA:** Local `make ci` passed in the PHP 8.5.11 container: 309 tests, 904
+  assertions, one optional JSON Schema skip, and 92.43% coverage. The E2E suite
+  passed (5 tests, 46 assertions); `make bench` passed at 17.903 μs (±2.43%);
+  Composer audit and pinned Gitleaks passed with no advisories or leaks.
+  Pinned Semgrep passed with zero findings on 125 tracked PHP files and the
+  new `DeadlineOption.php` file. Required GitHub PR checks, including remote
+  security and quality gates, remain pending. The first local CI attempt could
+  not write stale ignored coverage/cache directories; rerunning as container
+  UID 0 passed. PHPUnit skipped the optional JSON Schema validator because its
+  dependency is not installed.
 - **Allowed files:** None for QA; return evidence to root. If root approves a
   QA ledger, `joo-doc-writer` may write only `qa.md` from that approved
   evidence.
-- **Dependencies:** Tickets 1–8 accepted; Review phase passed and findings
-  are closed.
+- **Dependencies:** Tickets 1–8 and review are accepted; required remote PR
+  checks remain open.
 - **Acceptance and edge cases:**
   - Run project verification in the project containers and independently
     record environment, branch/commit, commands, results, and any unavailable
@@ -467,8 +473,9 @@ follows QA. A green focused check is not a substitute for the final gates.
     below; do not infer a pass from a developer handoff or missing result.
   - Map verification evidence to AC-1 through AC-10, including regression,
     failure-mode, integration, and benchmark/ownership results.
-  - Assess next-minor readiness from the evidence; state blockers or
-    uncertainty. Do not select a version or edit changelog/release metadata.
+  - Assess 4.5.0 readiness from the evidence; state blockers or uncertainty.
+    Release metadata belongs on `release/4.5.0` after the implementation PR is
+    merged to `develop`.
   - Gitleaks and Semgrep must use the pinned images/digests from the project
     CI workflow. Record CI-only security gates, including OSV Scanner and
     Dependency Review, when they cannot be run locally.
@@ -483,32 +490,25 @@ follows QA. A green focused check is not a substitute for the final gates.
   docker run --rm --volume "$PWD:/src:ro" semgrep/semgrep@sha256:67319956da3dcb58baf5b322899c15458e3963e7018a86aeeb5cd224e69cb77a semgrep scan --config p/php --error
   ```
 
-- **Do NOT:** Modify source, tests, or release metadata; choose a version,
-  create a tag, publish, or claim a gate passed without recorded evidence.
+- **Do NOT:** Modify source, tests, or release metadata as part of QA; create a
+  tag or publish outside the authorized release workflow; claim a gate passed
+  without recorded evidence.
 - **Ask for help when:** Any configured gate fails or is unavailable, a
   required CI-only status cannot be inspected, readiness evidence is
   inconclusive, or release metadata requirements need clarification.
-- **Progress / handover:** QA completed and accepted by root. In the project
-  container, isolated `composer ci` passed: 298 tests, 840 assertions, one
-  optional-dependency skip, and 92.40% coverage (1921/2079). E2E passed: 5
-  tests, 46 assertions. `composer audit`, pinned Gitleaks, and pinned Semgrep
-  passed; Semgrep scanned 124 tracked PHP targets and did not include new
-  untracked tests. `make bench` passed at 20.973 μs ±3.98% and created no
-  artifact. The unisolated CI invocation failed only because pre-existing
-  coverage/cache outputs are owned by UID 65534; those files were preserved.
-  Next-minor readiness is conditional: local evidence is green, but remote
-  OSV, Dependency Review, Codecov, and Sonar statuses were not available, and
-  the optional JSON Schema validator path did not execute in this container.
+- **Progress / handover:** Local QA is recorded above. Required remote PR
+  checks remain outstanding. The optional JSON Schema validator path did not
+  execute in this container.
 
 ### Reporting phase — Final traceability
 
 - **Traceability:** AC-1 through AC-10.
 - **Assigned to:** `joo-reporter` (Codex runtime default)
-- **Status:** done
+- **Status:** in-progress
 - **Allowed files:** `docs/01-projects/client/report.md` only; the reporter
   owns this single final artifact.
-- **Dependencies:** Review phase closed; Ticket 9 QA passed; root-approved
-  implementation, review, findings, and QA evidence is available.
+- **Dependencies:** Final review and Ticket 9 QA must close; the previously
+  created report predates the approved 4.5.0 release and needs a final refresh.
 - **Acceptance and edge cases:**
   - Map every AC to its ticket, implementation evidence, review disposition,
     and QA result.
@@ -520,11 +520,9 @@ follows QA. A green focused check is not a substitute for the final gates.
   declare overall completion; commit, publish, or tag.
 - **Ask for help when:** Any AC lacks implementation/review/QA evidence, a
   finding remains unresolved, or the approved artifacts conflict.
-- **Progress / handover:** `joo-reporter` created
-  `docs/01-projects/client/report.md`, mapping AC-1–AC-10 to implementation,
-  review, and QA evidence, with known risks and unverified gates. Root reviewed
-  the traceability and confirmed the conditional readiness boundary. No
-  version was selected; no tag or publish was created.
+- **Progress / handover:** `docs/01-projects/client/report.md` was created
+  before the user selected 4.5.0. Refresh its traceability and release status
+  after review, QA, and the required PR checks close.
 
 ## Decision log
 
@@ -535,4 +533,4 @@ follows QA. A green focused check is not a substitute for the final gates.
 | E2E target | One local PHP HTTP target server is shared by the supported transport matrix. | Keep real transport checks local and avoid external network dependencies. |
 | DNS/IP denial tests | Deterministic local unit tests abort before outbound requests. | Keep denial behavior reproducible and local. |
 | Delivery gates | Review follows implementation; independent QA follows review; reporting follows QA. | Apply the standard full-delivery review, QA, and traceability contracts. |
-| Release readiness | Assess next-minor readiness, but root confirms metadata/version decisions. | No version selection, tag, or publish is authorized by this plan. |
+| Release readiness | User approved 4.5.0; use the non-POC release PR flow after implementation PR checks pass. | The requested scope now includes release preparation and publishing. |

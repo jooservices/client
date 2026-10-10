@@ -13,8 +13,6 @@ use Psr\Http\Message\ResponseInterface;
 
 final class DeadlineMiddleware implements MiddlewareInterface
 {
-    private const DEADLINE_OPTION = '__joo_client_deadline_ns';
-
     public function __construct(private readonly float $seconds)
     {
     }
@@ -28,7 +26,7 @@ final class DeadlineMiddleware implements MiddlewareInterface
         }
 
         $extra = $options->extra;
-        $extra[self::DEADLINE_OPTION] = $deadline;
+        $extra[DeadlineOption::KEY] = $deadline;
 
         try {
             $response = $handler->handle($request, new RequestOptions(
