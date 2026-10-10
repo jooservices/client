@@ -1,5 +1,5 @@
 .PHONY: build install shell validate lint test test-coverage ci audit bench
-DOCKER_COMPOSE ?= docker compose
+DOCKER_COMPOSE ?= tools/ci/docker-compose
 PHP = $(DOCKER_COMPOSE) run --rm php
 build:
 	$(DOCKER_COMPOSE) build

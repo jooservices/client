@@ -32,7 +32,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 - Fluent `RequestBuilder`: verb methods, headers, query, raw body, `withJson()` / `withMultipart()` (auto `Content-Type`).
 - `Response::from()`: status helpers, header access, BOM-stripping cached JSON, 100 MB body ceiling, `throw()`, `toPsrResponse()` escape hatch.
 - Ranked middleware pipeline with canonical ordering and presets: observability, resilience, auth/security, and DX.
-- Resilience: retry, circuit breaker, rate limit, bulkhead, fallback, deadline — in-memory stores by default, PSR-16 adapters supported.
+- Resilience: retry, circuit breaker, rate limit, bulkhead, fallback, deadline — in-memory stores by default, PSR-16 adapters supported. A `withDeadline()` budget includes request attempts and retry backoff; each attempt timeout is clamped to the remaining budget.
 - Security defaults: TLS verification on, CR/LF injection rejected, credential stripping and private-IP policy on redirects, download-size guard, log sanitizer.
 - Transports: `CurlTransport` (default), `PsrTransport`, `GuzzleTransport` (optional), `FailoverTransport`.
 - Deterministic testing: fake registry, scripted `TestResponseSequence`s, recorded-request assertions, `InteractsWithHttpClient` trait.
@@ -48,7 +48,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 ## Installation
 
 ```bash
-composer require jooservices/client:^4.4
+composer require jooservices/client:^4.5
 ```
 
 ## Quick start
@@ -123,6 +123,7 @@ $client = ClientBuilder::create()
 ```
 
 - Same-host redirects skip the DNS-based target policy, so a relative redirect never fails closed on a transient lookup or an `/etc/hosts`-only host.
+- `GuzzleTransport` fails closed before following a cross-host redirect whenever the policy verifies DNS addresses, because its generic `send()` contract cannot pin the connection to those addresses. Cross-host redirects that do not require DNS pinning, including literal IP targets and explicitly allowed private targets, retain their existing behavior.
 - Sensitive headers (including `Cookie`) are stripped only when the host changes or the scheme downgrades to `http` — not on a port change or an `http` → `https` upgrade.
 - The cookie jar is scoped to the redirect chain: a cookie set on one hop is replayed to a later hop only when its domain, path, and `Secure` flag match. It is never persisted across separate requests.
 - `withDeadline($seconds)` also bounds the whole redirect chain, not just each individual hop.

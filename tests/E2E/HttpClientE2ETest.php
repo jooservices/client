@@ -4,10 +4,23 @@ declare(strict_types=1);
 
 namespace JOOservices\Client\Tests\E2E;
 
+use Faker\Factory;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Handler\CurlHandler;
+use GuzzleHttp\Handler\StreamHandler;
+use GuzzleHttp\HandlerStack;
 use JOOservices\Client\Client\ClientBuilder;
+use JOOservices\Client\Contracts\TransportCapabilities;
+use JOOservices\Client\Contracts\TransportInterface;
+use JOOservices\Client\Dto\RequestOptions;
+use JOOservices\Client\Exceptions\NetworkConnectionException;
 use JOOservices\Client\Exceptions\TimeoutException;
+use JOOservices\Client\Transport\GuzzleTransport;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use Throwable;
 
 final class HttpClientE2ETest extends TestCase
@@ -91,6 +104,96 @@ final class HttpClientE2ETest extends TestCase
 
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('sid=keep', (string) $response->getBody());
+    }
+
+    #[Test]
+    public function testSupportedTransportsReachTheSameLocalTargetServer(): void
+    {
+        $baseUri = 'http://127.0.0.1:' . $this->port . '/';
+        $factory = new Psr17Factory();
+        $guzzleCurl = new GuzzleClient([
+            'handler' => HandlerStack::create(new CurlHandler()),
+            'proxy' => ['http' => '', 'https' => ''],
+        ]);
+        $guzzleStream = new GuzzleClient([
+            'handler' => HandlerStack::create(new StreamHandler()),
+            'proxy' => ['http' => '', 'https' => ''],
+        ]);
+        $transports = [
+            'default ClientBuilder/CurlTransport' => ClientBuilder::create()
+                ->withBaseUri($baseUri)
+                ->build(),
+            'GuzzleTransport/CurlHandler' => ClientBuilder::create()
+                ->withBaseUri($baseUri)
+                ->withTransport(new GuzzleTransport($guzzleCurl, $factory, $factory))
+                ->build(),
+            'GuzzleTransport/StreamHandler' => ClientBuilder::create()
+                ->withBaseUri($baseUri)
+                ->withTransport(new GuzzleTransport($guzzleStream, $factory, $factory))
+                ->build(),
+            'injected PSR-18 client/PsrTransport' => ClientBuilder::create()
+                ->withBaseUri($baseUri)
+                ->withPsr18(new GuzzleClient([
+                    'handler' => HandlerStack::create(new CurlHandler()),
+                    'proxy' => ['http' => '', 'https' => ''],
+                ]))
+                ->build(),
+        ];
+
+        foreach ($transports as $name => $client) {
+            $payload = Factory::create()->bothify('matrix-????-####');
+            $request = $client->requestBuilder()
+                ->post('echo-body.php')
+                ->withBody($payload)
+                ->build()
+                ->toPsr();
+            $response = $client->sendRequest($request);
+
+            self::assertSame(200, $response->getStatusCode(), $name);
+            self::assertSame($payload, (string) $response->getBody(), $name . ' must reach the shared server and receive its echoed payload');
+        }
+
+        $firstTransport = new class implements TransportInterface {
+            public int $attempts = 0;
+
+            public function capabilities(): TransportCapabilities
+            {
+                return new TransportCapabilities([
+                    'timeout' => true,
+                    'connectTimeout' => true,
+                    'compression' => true,
+                    'proxy' => true,
+                    'verifySsl' => true,
+                    'allowRedirects' => true,
+                ]);
+            }
+
+            public function handle(RequestInterface $request, RequestOptions $options): ResponseInterface
+            {
+                unset($options);
+                ++$this->attempts;
+
+                throw new NetworkConnectionException($request, 'Deterministic first transport failure.');
+            }
+        };
+        $fallbackClient = ClientBuilder::create()
+            ->withBaseUri($baseUri)
+            ->withFailoverTransport([
+                $firstTransport,
+                new GuzzleTransport($guzzleCurl, $factory, $factory),
+            ])
+            ->build();
+        $fallbackPayload = Factory::create()->bothify('fallback-????-####');
+        $fallbackRequest = $fallbackClient->requestBuilder()
+            ->post('echo-body.php')
+            ->withBody($fallbackPayload)
+            ->build()
+            ->toPsr();
+        $fallbackResponse = $fallbackClient->sendRequest($fallbackRequest);
+
+        self::assertSame(1, $firstTransport->attempts, 'The deterministic primary must fail once before failover.');
+        self::assertSame(200, $fallbackResponse->getStatusCode());
+        self::assertSame($fallbackPayload, (string) $fallbackResponse->getBody(), 'The fallback transport must reach the same local target server.');
     }
 
     #[Test]

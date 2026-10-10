@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace JOOservices\Client\Response;
 
-use JOOservices\Client\Exceptions\DownloadSizeExceededException;
 use JOOservices\Client\Exceptions\HttpResponseException;
 use JOOservices\Client\Exceptions\JsonDecodingException;
 use JOOservices\Client\Support\StreamContents;
@@ -14,9 +13,6 @@ use Psr\Http\Message\ResponseInterface;
 
 final class Response
 {
-    /** Safety ceiling on the materialized body; body()/json()/object()/toDto()/collect() all route through it. */
-    private const MAX_BODY_BYTES = 104_857_600;
-
     /** @var array<mixed>|null */
     private ?array $json = null;
 
@@ -81,12 +77,10 @@ final class Response
             return $this->cachedBody;
         }
 
-        $body = $this->streams->read($this->psr->getBody());
-        if (strlen($body) > self::MAX_BODY_BYTES) {
-            throw new DownloadSizeExceededException(sprintf('Response body exceeds the %d byte limit.', self::MAX_BODY_BYTES));
-        }
-
-        return $this->cachedBody = $body;
+        return $this->cachedBody = $this->streams->readResponseBody(
+            $this->psr->getBody(),
+            $this->psr->getHeaderLine('Content-Length'),
+        );
     }
 
     /** @return array<mixed> */

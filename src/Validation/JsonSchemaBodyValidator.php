@@ -25,7 +25,12 @@ final class JsonSchemaBodyValidator
         }
 
         try {
-            $data = json_decode($this->streams->read($response->getBody()), false, 512, JSON_THROW_ON_ERROR);
+            $data = json_decode(
+                $this->streams->readResponseBody($response->getBody(), $response->getHeaderLine('Content-Length')),
+                false,
+                512,
+                JSON_THROW_ON_ERROR,
+            );
         } catch (JsonException $error) {
             throw new ResponseValidationException('Response body is not valid JSON for schema validation.', 0, $error);
         }
