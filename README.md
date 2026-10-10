@@ -48,7 +48,7 @@ A PHP 8.5+ PSR-18 HTTP client with a strict standards core and batteries include
 ## Installation
 
 ```bash
-composer require jooservices/client:^4.4
+composer require jooservices/client:^4.5
 ```
 
 ## Quick start
