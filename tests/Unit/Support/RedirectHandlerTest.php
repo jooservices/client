@@ -10,6 +10,7 @@ use JOOservices\Client\Exceptions\TimeoutException;
 use JOOservices\Client\Support\RedirectHandler;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
@@ -137,6 +138,65 @@ final class RedirectHandlerTest extends TestCase
         );
 
         self::assertSame(200, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function testAllowsPrivateDnsRedirectWhenExplicitlyConfigured(): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $calls = 0;
+
+        $response = $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/from'),
+            new RequestOptions(allowRedirects: ['allow_private' => true]),
+            function () use (&$calls): Response {
+                ++$calls;
+
+                return $calls === 1
+                    ? new Response(302, ['Location' => 'https://private.example/to'])
+                    : new Response(200);
+            },
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(2, $calls);
+    }
+
+    #[Test]
+    #[DataProvider('nonGlobalLiteralRedirectAddresses')]
+    public function testRejectsNonGlobalLiteralRedirectAddresses(string $address): void
+    {
+        $this->assertRedirectTargetIsRejected('https://' . $address . '/to');
+    }
+
+    #[Test]
+    #[DataProvider('nonGlobalDnsRedirectTargets')]
+    public function testRejectsNonGlobalDnsRedirectResults(string $hostname): void
+    {
+        $this->assertRedirectTargetIsRejected('https://' . $hostname . '/to');
+    }
+
+    #[Test]
+    #[DataProvider('globallyReachable192000Exceptions')]
+    public function testAllowsGloballyReachable192000Exceptions(string $target): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $calls = 0;
+
+        $response = $handler->send(
+            $factory->createRequest('GET', 'https://abc.com/from'),
+            new RequestOptions(allowRedirects: true),
+            function () use (&$calls, $target): Response {
+                ++$calls;
+
+                return $calls === 1 ? new Response(302, ['Location' => $target]) : new Response(200);
+            },
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(2, $calls);
     }
 
     #[Test]
@@ -465,5 +525,62 @@ final class RedirectHandlerTest extends TestCase
                 return new Response(302, ['Location' => '/to']);
             },
         );
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function nonGlobalLiteralRedirectAddresses(): iterable
+    {
+        yield 'CGNAT start' => ['100.64.0.1'];
+        yield 'CGNAT end' => ['100.127.255.254'];
+        yield '192.0.0.0/24 non-exception' => ['192.0.0.8'];
+        yield 'benchmark start' => ['198.18.0.1'];
+        yield 'benchmark end' => ['198.19.255.254'];
+        yield 'NAT64 start' => ['[64:ff9b::1]'];
+        yield 'NAT64 end' => ['[64:ff9b::ffff:ffff]'];
+        yield '6to4 start' => ['[2002:c000:0201::1]'];
+        yield '6to4 end' => ['[2002:ffff:ffff::1]'];
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function nonGlobalDnsRedirectTargets(): iterable
+    {
+        yield 'CGNAT' => ['cgnat.example'];
+        yield '192.0.0.0/24 non-exception' => ['protocol-assignment.example'];
+        yield 'benchmark' => ['benchmark.example'];
+        yield 'NAT64' => ['nat64.example'];
+        yield '6to4' => ['6to4.example'];
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function globallyReachable192000Exceptions(): iterable
+    {
+        yield 'literal .9' => ['https://192.0.0.9/to'];
+        yield 'literal .10' => ['https://192.0.0.10/to'];
+        yield 'DNS .9' => ['https://global-192-0-0-9.example/to'];
+        yield 'DNS .10' => ['https://global-192-0-0-10.example/to'];
+    }
+
+    private function assertRedirectTargetIsRejected(string $location): void
+    {
+        $factory = new Psr17Factory();
+        $handler = new RedirectHandler($factory, $factory);
+        $calls = 0;
+
+        try {
+            $handler->send(
+                $factory->createRequest('GET', 'https://abc.com/from'),
+                new RequestOptions(allowRedirects: true),
+                function () use (&$calls, $location): Response {
+                    ++$calls;
+
+                    return $calls === 1 ? new Response(302, ['Location' => $location]) : new Response(200);
+                },
+            );
+            self::fail('Expected a non-global redirect target to be rejected.');
+        } catch (RequestException $exception) {
+            self::assertStringContainsString('private, link-local, or unresolved', $exception->getMessage());
+        }
+
+        self::assertSame(1, $calls, 'A rejected target must not be sent as the next hop.');
     }
 }

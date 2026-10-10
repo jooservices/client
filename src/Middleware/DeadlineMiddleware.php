@@ -13,45 +13,54 @@ use Psr\Http\Message\ResponseInterface;
 
 final class DeadlineMiddleware implements MiddlewareInterface
 {
+    private const DEADLINE_OPTION = '__joo_client_deadline_ns';
+
     public function __construct(private readonly float $seconds)
     {
     }
 
     public function process(RequestInterface $request, RequestOptions $options, RequestHandlerInterface $handler): ResponseInterface
     {
-        $started = hrtime(true);
+        $deadline = hrtime(true) + (int) round($this->seconds * 1_000_000_000);
+        $remaining = $this->remainingSeconds($deadline);
+        if ($remaining <= 0.0) {
+            throw new TimeoutException($request, 'The client deadline elapsed.');
+        }
+
+        $extra = $options->extra;
+        $extra[self::DEADLINE_OPTION] = $deadline;
 
         try {
             $response = $handler->handle($request, new RequestOptions(
-                timeout: min($options->timeout ?? $this->seconds, $this->seconds),
+                timeout: min($options->timeout ?? $remaining, $remaining),
                 connectTimeout: $options->connectTimeout,
                 proxy: $options->proxy,
                 verifySsl: $options->verifySsl,
                 allowRedirects: $this->redirectBudget($options->allowRedirects),
-                extra: $options->extra,
+                extra: $extra,
                 compression: $options->compression,
             ));
         } catch (\Throwable $error) {
             // The per-attempt timeout above only bounds a single HTTP attempt; a retry/backoff sequence
             // wrapped by this middleware can still blow past the deadline before finally throwing. Make
             // sure that's surfaced here too, not just on the success path.
-            if ($this->elapsedSeconds($started) > $this->seconds) {
+            if (hrtime(true) >= $deadline) {
                 throw new TimeoutException($request, 'The client deadline elapsed.', $error);
             }
 
             throw $error;
         }
 
-        if ($this->elapsedSeconds($started) > $this->seconds) {
+        if (hrtime(true) >= $deadline) {
             throw new TimeoutException($request, 'The client deadline elapsed.');
         }
 
         return $response;
     }
 
-    private function elapsedSeconds(int $started): float
+    private function remainingSeconds(int $deadline): float
     {
-        return (hrtime(true) - $started) / 1_000_000_000;
+        return ($deadline - hrtime(true)) / 1_000_000_000;
     }
 
     /**

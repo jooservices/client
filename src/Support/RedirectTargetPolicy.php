@@ -94,6 +94,46 @@ final class RedirectTargetPolicy
 
     private function isPublicAddress(string $address): bool
     {
-        return filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+        if (in_array($address, ['192.0.0.9', '192.0.0.10'], true)) {
+            return true;
+        }
+
+        if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            return false;
+        }
+
+        return ! $this->isNonGlobalSpecialUseAddress($address);
+    }
+
+    private function isNonGlobalSpecialUseAddress(string $address): bool
+    {
+        return $this->isInRange($address, '100.64.0.0', 10)
+            || $this->isInRange($address, '192.0.0.0', 24)
+            || $this->isInRange($address, '198.18.0.0', 15)
+            || $this->isInRange($address, '64:ff9b::', 96)
+            || $this->isInRange($address, '2002::', 16);
+    }
+
+    private function isInRange(string $address, string $network, int $prefixLength): bool
+    {
+        $addressBytes = inet_pton($address);
+        $networkBytes = inet_pton($network);
+        if ($addressBytes === false || $networkBytes === false || strlen($addressBytes) !== strlen($networkBytes)) {
+            return false;
+        }
+
+        $wholeBytes = intdiv($prefixLength, 8);
+        if (substr($addressBytes, 0, $wholeBytes) !== substr($networkBytes, 0, $wholeBytes)) {
+            return false;
+        }
+
+        $remainingBits = $prefixLength % 8;
+        if ($remainingBits === 0) {
+            return true;
+        }
+
+        $mask = 0xff << (8 - $remainingBits);
+
+        return (ord($addressBytes[$wholeBytes]) & $mask) === (ord($networkBytes[$wholeBytes]) & $mask);
     }
 }

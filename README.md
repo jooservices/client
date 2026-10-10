@@ -123,6 +123,7 @@ $client = ClientBuilder::create()
 ```
 
 - Same-host redirects skip the DNS-based target policy, so a relative redirect never fails closed on a transient lookup or an `/etc/hosts`-only host.
+- `GuzzleTransport` fails closed before following a cross-host redirect whenever the policy verifies DNS addresses, because its generic `send()` contract cannot pin the connection to those addresses. Cross-host redirects that do not require DNS pinning, including literal IP targets and explicitly allowed private targets, retain their existing behavior.
 - Sensitive headers (including `Cookie`) are stripped only when the host changes or the scheme downgrades to `http` — not on a port change or an `http` → `https` upgrade.
 - The cookie jar is scoped to the redirect chain: a cookie set on one hop is replayed to a later hop only when its domain, path, and `Secure` flag match. It is never persisted across separate requests.
 - `withDeadline($seconds)` also bounds the whole redirect chain, not just each individual hop.

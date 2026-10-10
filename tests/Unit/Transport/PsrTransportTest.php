@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JOOservices\Client\Tests\Unit\Transport;
 
+use Faker\Factory;
 use JOOservices\Client\Dto\RequestOptions;
 use JOOservices\Client\Exceptions\NetworkConnectionException;
 use JOOservices\Client\Exceptions\RequestException as JooRequestException;
@@ -38,6 +39,40 @@ final class PsrTransportTest extends TestCase
 
         self::assertSame(204, $response->getStatusCode());
         self::assertSame('https://abc.com/ping', $response->getHeaderLine('X-Uri'));
+    }
+
+    #[Test]
+    public function testRestoresTheOriginalSeekableBodyPositionAfterTheClientConsumesAndFails(): void
+    {
+        $factory = new Psr17Factory();
+        $payload = Factory::create()->sentence(8);
+        $body = $factory->createStream($payload);
+        $initialPosition = intdiv(strlen($payload), 3);
+        $body->seek($initialPosition);
+        $request = $factory->createRequest('PUT', 'https://abc.com/resource')->withBody($body);
+        $inner = new class implements ClientInterface {
+            public function sendRequest(RequestInterface $request): ResponseInterface
+            {
+                $request->getBody()->getContents();
+
+                throw new class ('offline') extends \RuntimeException implements NetworkExceptionInterface {
+                    public function getRequest(): RequestInterface
+                    {
+                        return new Psr17Factory()->createRequest('PUT', 'https://abc.com/resource');
+                    }
+                };
+            }
+        };
+
+        try {
+            (new PsrTransport($inner))->handle($request, new RequestOptions());
+            self::fail('Expected the generic client network exception to be normalized.');
+        } catch (NetworkConnectionException) {
+            // Expected: the transport preserves the stream even when the client fails after draining it.
+        }
+
+        self::assertSame($initialPosition, $body->tell());
+        self::assertSame(substr($payload, $initialPosition), $body->getContents());
     }
 
     #[Test]

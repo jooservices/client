@@ -19,7 +19,18 @@ final class LogSanitizer
                 $context[$key] = $this->sanitize($value);
             } elseif (is_string($value)) {
                 $value = preg_replace('/(:\/\/)[^\/\s@]+:[^\/\s@]*@/', '$1[redacted]@', $value) ?? $value;
-                $context[$key] = preg_replace('/([?&][\w-]*(?:token|api[_-]?key|password|secret|sig|signature|auth|jwt|session|sid|credential)[\w-]*=)[^&]*/i', '$1[redacted]', $value) ?? $value;
+                $context[$key] = preg_replace_callback(
+                    '/([?&#;])([^=?&#;]*=)([^&#;]*)/',
+                    static function (array $matches): string {
+                        $name = rawurldecode(substr($matches[2], 0, -1));
+                        if (preg_match('/^[\w-]*(?:token|api[_-]?key|password|secret|sig|signature|auth|jwt|session|sid|credential)[\w-]*$/i', $name) !== 1) {
+                            return $matches[0];
+                        }
+
+                        return $matches[1] . $matches[2] . '[redacted]';
+                    },
+                    $value,
+                ) ?? $value;
             }
         }
 

@@ -9,6 +9,7 @@ use JOOservices\Client\Contracts\MiddlewareInterface;
 use JOOservices\Client\Contracts\RequestHandlerInterface;
 use JOOservices\Client\Dto\CacheConfig;
 use JOOservices\Client\Dto\RequestOptions;
+use JOOservices\Client\Exceptions\DownloadSizeExceededException;
 use JOOservices\Client\Exceptions\InvalidConfigurationException;
 use JOOservices\Client\Support\StreamContents;
 use Psr\Http\Message\RequestInterface;
@@ -41,11 +42,15 @@ final class CacheMiddleware implements MiddlewareInterface
             return $handler->handle($request, $options);
         }
 
+        if ($request->hasHeader('Range') || $request->hasHeader('If-Range')) {
+            return $handler->handle($request, $options);
+        }
+
         $key = 'http:' . hash('sha256', (string) $request->getUri() . "\n" . $this->principal($request));
         $cached = $this->get($key);
         if (is_array($cached)) {
             /** @var array<string, mixed> $cached */
-            if ($this->varyMatches($cached, $request)) {
+            if (($cached['status'] ?? null) !== 206 && $this->varyMatches($cached, $request)) {
                 return $this->hydrate($cached);
             }
         }
@@ -77,10 +82,10 @@ final class CacheMiddleware implements MiddlewareInterface
 
     private function isStoreable(ResponseInterface $response, string $cacheControl): bool
     {
-        // Only 2xx: a cached 3xx would replay a stale redirect target without checking the origin again,
-        // and this middleware sees a 3xx at all only when redirects are disabled or exhausted upstream.
+        // Partial content must not satisfy a later plain GET; preserve caching for other 2xx responses.
         return $response->getStatusCode() >= 200
             && $response->getStatusCode() < 300
+            && $response->getStatusCode() !== 206
             && ! str_contains($cacheControl, 'no-store')
             && ! str_contains($cacheControl, 'private')
             && strtolower($response->getHeaderLine('Vary')) !== '*';
@@ -113,11 +118,18 @@ final class CacheMiddleware implements MiddlewareInterface
 
     private function put(string $key, RequestInterface $request, ResponseInterface $response, string $cacheControl): ResponseInterface
     {
-        // read() can only preserve the cursor for a seekable stream; a non-seekable one is fully
-        // drained by the getContents() call inside it, with no way to restore it. Rebuild the body from
-        // the captured content so the caller gets a fresh, fully-readable stream either way.
-        $body = $this->contents->read($response->getBody());
-        $response = $response->withBody($this->streams->createStream($body));
+        $bodyStream = $response->getBody();
+        if (! $bodyStream->isSeekable()) {
+            // Skipping non-seekable streams avoids consuming an unknown or under-reported body just
+            // to decide whether it can be cached. The origin response remains untouched and readable.
+            return $response;
+        }
+
+        try {
+            $body = $this->contents->readResponseBody($bodyStream, $response->getHeaderLine('Content-Length'));
+        } catch (DownloadSizeExceededException) {
+            return $response;
+        }
 
         $headers = [];
         foreach ($response->getHeaders() as $name => $values) {

@@ -15,6 +15,7 @@ use Psr\Http\Client\NetworkExceptionInterface;
 use Psr\Http\Client\RequestExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Throwable;
 
 final class PsrTransport implements TransportInterface
 {
@@ -31,6 +32,16 @@ final class PsrTransport implements TransportInterface
     {
         unset($options);
 
+        $body = $request->getBody();
+        $position = null;
+        try {
+            if ($body->isSeekable()) {
+                $position = $body->tell();
+            }
+        } catch (Throwable $error) {
+            throw new RequestException($request, 'Unable to preserve the request body position.', $error);
+        }
+
         try {
             return $this->client->sendRequest($request);
         } catch (NetworkExceptionInterface $error) {
@@ -42,6 +53,14 @@ final class PsrTransport implements TransportInterface
             throw new RequestException($request, $error->getMessage(), $error);
         } catch (ClientExceptionInterface $error) {
             throw new NetworkConnectionException($request, $error->getMessage(), $error);
+        } finally {
+            if ($position !== null) {
+                try {
+                    $body->seek($position);
+                } catch (Throwable $error) {
+                    throw new RequestException($request, 'Unable to restore the request body position after sending.', $error);
+                }
+            }
         }
     }
 }
