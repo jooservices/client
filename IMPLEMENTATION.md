@@ -449,22 +449,22 @@ follows QA. A green focused check is not a substitute for the final gates.
 - **Traceability:** AC-10; independently verify AC-1 through AC-9 from the
   accepted implementation and review evidence.
 - **Assigned to:** `joo-qa` (Codex runtime default)
-- **Status:** in-progress
-- **QA:** Local `make ci` passed in the PHP 8.5.11 container: 309 tests, 904
+- **Status:** done
+- **QA:** Accepted — local `make ci` passed in the PHP 8.5.11 container: 309 tests, 904
   assertions, one optional JSON Schema skip, and 92.43% coverage. The E2E suite
   passed (5 tests, 46 assertions); `make bench` passed at 17.903 μs (±2.43%);
   Composer audit and pinned Gitleaks passed with no advisories or leaks.
   Pinned Semgrep passed with zero findings on 125 tracked PHP files and the
-  new `DeadlineOption.php` file. Required GitHub PR checks, including remote
-  security and quality gates, remain pending. The first local CI attempt could
-  not write stale ignored coverage/cache directories; rerunning as container
-  UID 0 passed. PHPUnit skipped the optional JSON Schema validator because its
-  dependency is not installed.
+  new `DeadlineOption.php` file. All required GitHub PR #38 checks passed, and
+  the three outdated CodeRabbit threads are resolved. The first local CI
+  attempt could not write stale ignored coverage/cache directories; rerunning
+  as container UID 0 passed. PHPUnit skipped the optional JSON Schema
+  validator because its dependency is not installed.
 - **Allowed files:** None for QA; return evidence to root. If root approves a
   QA ledger, `joo-doc-writer` may write only `qa.md` from that approved
   evidence.
-- **Dependencies:** Tickets 1–8 and review are accepted; required remote PR
-  checks remain open.
+- **Dependencies:** Tickets 1–8 and review are accepted; PR #38 checks are
+  green. Create the release branch after PR #38 merges into `develop`.
 - **Acceptance and edge cases:**
   - Run project verification in the project containers and independently
     record environment, branch/commit, commands, results, and any unavailable
@@ -496,8 +496,8 @@ follows QA. A green focused check is not a substitute for the final gates.
 - **Ask for help when:** Any configured gate fails or is unavailable, a
   required CI-only status cannot be inspected, readiness evidence is
   inconclusive, or release metadata requirements need clarification.
-- **Progress / handover:** Local QA is recorded above. Required remote PR
-  checks remain outstanding. The optional JSON Schema validator path did not
+- **Progress / handover:** Local and remote QA are recorded above. Readiness
+  for 4.5.0 is confirmed; the optional JSON Schema validator path did not
   execute in this container.
 
 ### Reporting phase — Final traceability
