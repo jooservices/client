@@ -9,6 +9,34 @@ All notable changes to this package are documented in this file. Format follows 
 
 ## [Unreleased]
 
+## [4.5.0] - 2026-10-11
+
+### Security
+
+- Reject redirect targets in non-global special-use IPv4 and IPv6 ranges while
+  preserving globally reachable address exceptions. `CurlTransport` pins
+  validated redirect addresses; `GuzzleTransport` fails closed for cross-host
+  redirects when its PSR-18 client cannot enforce those pins.
+- Redact percent-encoded sensitive query keys and semicolon-delimited
+  credentials in logged URLs, including long token values.
+
+### Fixed
+
+- Preserve seekable request bodies across PSR-18 sends, retries, and failover;
+  retain the original transport failure if body-position restoration also
+  fails.
+- Keep ranged requests and `206 Partial Content` responses out of full-response
+  cache entries.
+- Enforce response-size limits before and during body materialization for
+  transports that do not enforce the limit while streaming.
+- Apply `withDeadline()` across request attempts and retry backoff, clamp each
+  attempt timeout to the remaining budget, and stop retries after expiry.
+
+### Developer experience
+
+- Run `make bench` successfully in the standard Docker setup using the host
+  user's identity.
+
 ## [4.4.1] - 2026-10-03
 
 ### Security
@@ -58,7 +86,8 @@ All notable changes to this package are documented in this file. Format follows 
 - Added cross-origin redirect credential protection and public-to-private redirect policy.
 - Added streaming cURL bodies, PSR-16 resilience adapters, optional JSON Schema validation, WAN-IP middleware, reusable fakes, Docker quality gates, CI/release workflows and benchmark support.
 
-[Unreleased]: https://github.com/jooservices/client/compare/v4.4.1...HEAD
+[Unreleased]: https://github.com/jooservices/client/compare/v4.5.0...HEAD
+[4.5.0]: https://github.com/jooservices/client/compare/v4.4.1...v4.5.0
 [4.4.1]: https://github.com/jooservices/client/compare/v4.4.0...v4.4.1
 [4.4.0]: https://github.com/jooservices/client/compare/v4.3.0...v4.4.0
 [4.3.0]: https://github.com/jooservices/client/compare/v4.2.0...v4.3.0
